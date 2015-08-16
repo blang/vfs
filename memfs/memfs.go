@@ -18,7 +18,7 @@ var (
 	ErrWriteOnly = errors.New("File is write-only")
 )
 
-const PathSeperator = "/"
+const PathSeparator = "/"
 
 type memFS struct {
 	root *fileInfo
@@ -148,7 +148,7 @@ func (fs *memFS) ReadDir(path string) ([]os.FileInfo, error) {
 // findFileinfo searches the filetree beginning at root and returns the fileInfo of the file at path
 func (fs *memFS) findFileinfo(dir string) (*fileInfo, error) {
 	dir = filepath.Clean(dir)
-	segments := SplitPath(dir, PathSeperator)
+	segments := SplitPath(dir, PathSeparator)
 	if len(segments) == 1 {
 		if segments[0] == "" {
 			return fs.root, nil
@@ -220,13 +220,13 @@ func (fs *memFS) OpenFile(name string, flag int, perm os.FileMode) (vfs.File, er
 	} else { // find existing
 		if fiParent.childs == nil {
 			return nil, os.ErrNotExist
-		} else {
-			var ok bool
-			fi, ok = fiParent.childs[base]
-			if !ok {
-				return nil, os.ErrNotExist
-			}
 		}
+		var ok bool
+		fi, ok = fiParent.childs[base]
+		if !ok {
+			return nil, os.ErrNotExist
+		}
+
 	}
 
 	return fi.File(flag)
