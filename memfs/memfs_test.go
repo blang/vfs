@@ -10,12 +10,12 @@ import (
 
 func TestInterface(t *testing.T) {
 	var fs vfs.Filesystem
-	fs = MemFS()
+	fs = Create()
 	fs.Mkdir("/tmp", 0777)
 }
 
 func TestCreate(t *testing.T) {
-	fs := MemFS()
+	fs := Create()
 	// Create file with absolute path
 	{
 		f, err := fs.Create("/testfile")
@@ -58,7 +58,7 @@ func TestCreate(t *testing.T) {
 }
 
 func TestMkdirAbsRel(t *testing.T) {
-	fs := MemFS()
+	fs := Create()
 
 	// Create dir with absolute path
 	{
@@ -86,7 +86,7 @@ func TestMkdirAbsRel(t *testing.T) {
 }
 
 func TestMkdirTree(t *testing.T) {
-	fs := MemFS()
+	fs := Create()
 
 	err := fs.Mkdir("/home", 0)
 	if err != nil {
@@ -112,7 +112,7 @@ func TestMkdirTree(t *testing.T) {
 }
 
 func TestReadDir(t *testing.T) {
-	fs := MemFS()
+	fs := Create()
 	dirs := []string{"/home", "/home/linus", "/home/rob", "/home/pike", "/home/blang"}
 	expectNames := []string{"README.txt", "blang", "linus", "pike", "rob"}
 	for _, dir := range dirs {
@@ -165,7 +165,7 @@ func TestReadDir(t *testing.T) {
 }
 
 func TestRemove(t *testing.T) {
-	fs := MemFS()
+	fs := Create()
 	err := fs.Mkdir("/tmp", 0777)
 	if err != nil {
 		t.Fatalf("Mkdir error: %s", err)
@@ -211,7 +211,7 @@ func TestRemove(t *testing.T) {
 }
 
 func TestReadWrite(t *testing.T) {
-	fs := MemFS()
+	fs := Create()
 	f, err := fs.OpenFile("/readme.txt", os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
 		t.Fatalf("Could not open file: %s", err)
@@ -262,7 +262,7 @@ func TestReadWrite(t *testing.T) {
 }
 
 func TestOpenRO(t *testing.T) {
-	fs := MemFS()
+	fs := Create()
 	f, err := fs.OpenFile("/readme.txt", os.O_CREATE|os.O_RDONLY, 0666)
 	if err != nil {
 		t.Fatalf("Could not open file: %s", err)
@@ -276,7 +276,7 @@ func TestOpenRO(t *testing.T) {
 }
 
 func TestOpenWO(t *testing.T) {
-	fs := MemFS()
+	fs := Create()
 	f, err := fs.OpenFile("/readme.txt", os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
 		t.Fatalf("Could not open file: %s", err)
@@ -304,7 +304,7 @@ func TestOpenWO(t *testing.T) {
 }
 
 func TestOpenAppend(t *testing.T) {
-	fs := MemFS()
+	fs := Create()
 	f, err := fs.OpenFile("/readme.txt", os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
 		t.Fatalf("Could not open file: %s", err)
@@ -347,7 +347,7 @@ func TestOpenAppend(t *testing.T) {
 
 func TestTruncate(t *testing.T) {
 	const content = "read me"
-	fs := MemFS()
+	fs := Create()
 	if _, err := writeFile(fs, "/readme.txt", os.O_CREATE|os.O_RDWR, 0666, []byte(content)); err != nil {
 		t.Errorf("Unexpected error writing file: %s", err)
 	}
@@ -373,7 +373,7 @@ func TestTruncate(t *testing.T) {
 }
 
 func TestStat(t *testing.T) {
-	fs := MemFS()
+	fs := Create()
 	f, err := fs.OpenFile("/readme.txt", os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
 		t.Fatalf("Could not open file: %s", err)
@@ -435,7 +435,7 @@ func readFile(fs vfs.Filesystem, name string) ([]byte, error) {
 
 func TestRename(t *testing.T) {
 	const content = "read me"
-	fs := MemFS()
+	fs := Create()
 	if _, err := writeFile(fs, "/readme.txt", os.O_CREATE|os.O_RDWR, 0666, []byte(content)); err != nil {
 		t.Errorf("Unexpected error writing file: %s", err)
 	}

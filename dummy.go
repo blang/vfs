@@ -5,51 +5,53 @@ import (
 )
 
 // Dummy creates a new dummy filesystem which returns the given error on every operation.
-func Dummy(err error) Filesystem {
-	return &dummyFS{err}
+func Dummy(err error) *DummyFS {
+	return &DummyFS{err}
 }
 
-type dummyFS struct {
+// DummyFS is dummy filesystem which returns an error on every operation.
+// It can be used to mock a full filesystem for testing or fs creation.
+type DummyFS struct {
 	err error
 }
 
 // Create returns dummy error
-func (fs dummyFS) Create(name string) (File, error) {
+func (fs DummyFS) Create(name string) (File, error) {
 	return nil, fs.err
 }
 
 // OpenFile returns dummy error
-func (fs dummyFS) OpenFile(name string, flag int, perm os.FileMode) (File, error) {
+func (fs DummyFS) OpenFile(name string, flag int, perm os.FileMode) (File, error) {
 	return nil, fs.err
 }
 
 // Remove returns dummy error
-func (fs dummyFS) Remove(name string) error {
+func (fs DummyFS) Remove(name string) error {
 	return fs.err
 }
 
 // Rename returns dummy error
-func (fs dummyFS) Rename(oldpath, newpath string) error {
+func (fs DummyFS) Rename(oldpath, newpath string) error {
 	return fs.err
 }
 
 // Mkdir returns dummy error
-func (fs dummyFS) Mkdir(name string, perm os.FileMode) error {
+func (fs DummyFS) Mkdir(name string, perm os.FileMode) error {
 	return fs.err
 }
 
 // Stat returns dummy error
-func (fs dummyFS) Stat(name string) (os.FileInfo, error) {
+func (fs DummyFS) Stat(name string) (os.FileInfo, error) {
 	return nil, fs.err
 }
 
 // Lstat returns dummy error
-func (fs dummyFS) Lstat(name string) (os.FileInfo, error) {
+func (fs DummyFS) Lstat(name string) (os.FileInfo, error) {
 	return nil, fs.err
 }
 
 // ReadDir returns dummy error
-func (fs dummyFS) ReadDir(path string) ([]os.FileInfo, error) {
+func (fs DummyFS) ReadDir(path string) ([]os.FileInfo, error) {
 	return nil, fs.err
 }
 
@@ -64,35 +66,36 @@ func (fs dummyFS) ReadDir(path string) ([]os.FileInfo, error) {
 // 	func (fs writeDummyFS) OpenFile(name string, flag int, perm os.FileMode) (File, error) {
 // 		return DummyFile(dummyError), nil
 // 	}
-func DummyFile(err error) File {
-	return &dummyFile{err}
+func DummyFile(err error) *DumFile {
+	return &DumFile{err}
 }
 
-type dummyFile struct {
+// DumFile represents a dummy File
+type DumFile struct {
 	err error
 }
 
 // Name returns "dummy"
-func (f dummyFile) Name() string {
+func (f DumFile) Name() string {
 	return "dummy"
 }
 
 // Close returns dummy error
-func (f dummyFile) Close() error {
+func (f DumFile) Close() error {
 	return f.err
 }
 
 // Write returns dummy error
-func (f dummyFile) Write(p []byte) (n int, err error) {
+func (f DumFile) Write(p []byte) (n int, err error) {
 	return 0, f.err
 }
 
 // Read returns dummy error
-func (f dummyFile) Read(p []byte) (n int, err error) {
+func (f DumFile) Read(p []byte) (n int, err error) {
 	return 0, f.err
 }
 
 // Seek returns dummy error
-func (f dummyFile) Seek(offset int64, whence int) (int64, error) {
+func (f DumFile) Seek(offset int64, whence int) (int64, error) {
 	return 0, f.err
 }

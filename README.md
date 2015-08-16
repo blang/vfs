@@ -30,7 +30,7 @@ f, _ := fs.OpenFile("/tmp/example.txt", os.O_RDWR, 0)
 _, err := f.Write([]byte("Write on readonly fs?"))
 
 // Create a fully writable filesystem in memory
-fs := memfs.MemFS()
+fs := memfs.Create()
 fs.Mkdir("/root")
 ```
 

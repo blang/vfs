@@ -16,11 +16,13 @@ import (
 // And disables OpenFile flags: os.O_CREATE, os.O_APPEND, os.O_WRONLY
 //
 // OpenFile returns a File with disabled Write() method otherwise.
-func ReadOnly(fs Filesystem) Filesystem {
-	return &roFS{Filesystem: fs}
+func ReadOnly(fs Filesystem) *RoFS {
+	return &RoFS{Filesystem: fs}
 }
 
-type roFS struct {
+// RoFS represents a read-only filesystem and
+// works as a wrapper around existing filesystems.
+type RoFS struct {
 	Filesystem
 }
 
@@ -28,28 +30,28 @@ type roFS struct {
 var ErrReadOnly = errors.New("Filesystem is read-only")
 
 // Create is disabled and returns ErrorReadOnly
-func (fs roFS) Create(name string) (File, error) {
+func (fs RoFS) Create(name string) (File, error) {
 	return nil, ErrReadOnly
 }
 
 // Remove is disabled and returns ErrorReadOnly
-func (fs roFS) Remove(name string) error {
+func (fs RoFS) Remove(name string) error {
 	return ErrReadOnly
 }
 
 // Rename is disabled and returns ErrorReadOnly
-func (fs roFS) Rename(oldpath, newpath string) error {
+func (fs RoFS) Rename(oldpath, newpath string) error {
 	return ErrReadOnly
 }
 
 // Mkdir is disabled and returns ErrorReadOnly
-func (fs roFS) Mkdir(name string, perm os.FileMode) error {
+func (fs RoFS) Mkdir(name string, perm os.FileMode) error {
 	return ErrReadOnly
 }
 
 // OpenFile returns ErrorReadOnly if flag contains os.O_CREATE, os.O_APPEND, os.O_WRONLY.
 // Otherwise it returns a read-only File with disabled Write(..) operation.
-func (fs roFS) OpenFile(name string, flag int, perm os.FileMode) (File, error) {
+func (fs RoFS) OpenFile(name string, flag int, perm os.FileMode) (File, error) {
 	if flag&os.O_CREATE == os.O_CREATE {
 		return nil, ErrReadOnly
 	}

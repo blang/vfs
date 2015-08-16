@@ -20,14 +20,15 @@ const MinBufferSize = 512
 // ErrTooLarge is thrown if it was not possible to enough memory
 var ErrTooLarge = errors.New("Volume too large")
 
-type buffer struct {
+// Buf is a Buffer working on a slice of bytes.
+type Buf struct {
 	buf *[]byte
 	ptr int64
 }
 
 // NewBuffer creates a new data volume based on a buffer
-func NewBuffer(buf *[]byte) Buffer {
-	return &buffer{
+func NewBuffer(buf *[]byte) *Buf {
+	return &Buf{
 		buf: buf,
 	}
 }
@@ -38,7 +39,7 @@ func NewBuffer(buf *[]byte) Buffer {
 // 	1 (os.SEEK_CUR) means relative to the current offset
 // 	2 (os.SEEK_END) means relative to the end of the file
 // It returns the new offset and an error, if any.
-func (v *buffer) Seek(offset int64, whence int) (int64, error) {
+func (v *Buf) Seek(offset int64, whence int) (int64, error) {
 	var abs int64
 	switch whence {
 	case os.SEEK_SET: // Relative to the origin of the file
@@ -63,7 +64,7 @@ func (v *buffer) Seek(offset int64, whence int) (int64, error) {
 // Write writes len(p) byte to the Buffer.
 // It returns the number of bytes written and an error if any.
 // Write returns non-nil error when n!=len(p).
-func (v *buffer) Write(p []byte) (int, error) {
+func (v *Buf) Write(p []byte) (int, error) {
 	l := len(p)
 	err := v.grow(l)
 	if err != nil {
@@ -75,14 +76,14 @@ func (v *buffer) Write(p []byte) (int, error) {
 }
 
 // Close the buffer. Currently no effect.
-func (v *buffer) Close() error {
+func (v *Buf) Close() error {
 	return nil
 }
 
 // Read reads len(p) byte from the Buffer starting at the current offset.
 // It returns the number of bytes read and an error if any.
 // Returns io.EOF error if pointer is at the end of the Buffer.
-func (v *buffer) Read(p []byte) (n int, err error) {
+func (v *Buf) Read(p []byte) (n int, err error) {
 	if len(p) == 0 {
 		return 0, nil
 	}
@@ -95,7 +96,7 @@ func (v *buffer) Read(p []byte) (n int, err error) {
 	return
 }
 
-func (v *buffer) grow(n int) error {
+func (v *Buf) grow(n int) error {
 	m := len(*v.buf)
 	if (m + n) > cap(*v.buf) {
 		buf, err := makeSlice(2*cap(*v.buf) + MinBufferSize)

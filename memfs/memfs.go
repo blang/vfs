@@ -24,10 +24,24 @@ var (
 // PathSeparator used to separate path segments
 const PathSeparator = "/"
 
-type memFS struct {
+// MemFS is a in-memory filesystem
+type MemFS struct {
 	root *fileInfo
 	wd   *fileInfo
 	lock *sync.RWMutex
+}
+
+// Create a new MemFS filesystem which entirely resides in memory
+func Create() *MemFS {
+	root := &fileInfo{
+		name: "/",
+		dir:  true,
+	}
+	return &MemFS{
+		root: root,
+		wd:   root,
+		lock: &sync.RWMutex{},
+	}
 }
 
 type fileInfo struct {
@@ -85,21 +99,8 @@ func (fi fileInfo) AbsPath() string {
 	return "/"
 }
 
-// MemFS creates a new filesystem which entirely resides in memory
-func MemFS() vfs.Filesystem {
-	root := &fileInfo{
-		name: "/",
-		dir:  true,
-	}
-	return &memFS{
-		root: root,
-		wd:   root,
-		lock: &sync.RWMutex{},
-	}
-}
-
 // Mkdir creates a new directory with given permissions
-func (fs *memFS) Mkdir(name string, perm os.FileMode) error {
+func (fs *MemFS) Mkdir(name string, perm os.FileMode) error {
 	fs.lock.Lock()
 	defer fs.lock.Unlock()
 	name = filepath.Clean(name)
@@ -136,7 +137,8 @@ func (f byName) Less(i, j int) bool { return f[i].Name() < f[j].Name() }
 // Swap two elements by index
 func (f byName) Swap(i, j int) { f[i], f[j] = f[j], f[i] }
 
-func (fs *memFS) ReadDir(path string) ([]os.FileInfo, error) {
+// ReadDir reads the directory named by path and returns a list of sorted directory entries.
+func (fs *MemFS) ReadDir(path string) ([]os.FileInfo, error) {
 	fs.lock.RLock()
 	defer fs.lock.RUnlock()
 
@@ -157,7 +159,7 @@ func (fs *memFS) ReadDir(path string) ([]os.FileInfo, error) {
 	return fis, nil
 }
 
-func (fs *memFS) fileInfo(path string) (parent *fileInfo, node *fileInfo, err error) {
+func (fs *MemFS) fileInfo(path string) (parent *fileInfo, node *fileInfo, err error) {
 	path = filepath.Clean(path)
 	segments := SplitPath(path, PathSeparator)
 
@@ -205,7 +207,7 @@ func (fs *memFS) fileInfo(path string) (parent *fileInfo, node *fileInfo, err er
 }
 
 // Create a new file handle. Will truncate file if it already exist.
-func (fs *memFS) Create(name string) (vfs.File, error) {
+func (fs *MemFS) Create(name string) (vfs.File, error) {
 	return fs.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
 }
 
@@ -216,7 +218,7 @@ func hasFlag(flag int, flags int) bool {
 // OpenFile opens a file handle with a specified flag (os.O_RDONLY etc.) and perm (e.g. 0666).
 // If success the returned File can be used for I/O. Otherwise an error is returned, which
 // is a *os.PathError and can be extracted for further information.
-func (fs *memFS) OpenFile(name string, flag int, perm os.FileMode) (vfs.File, error) {
+func (fs *MemFS) OpenFile(name string, flag int, perm os.FileMode) (vfs.File, error) {
 	fs.lock.Lock()
 	defer fs.lock.Unlock()
 
@@ -262,7 +264,7 @@ func (fi *fileInfo) file(flag int) (vfs.File, error) {
 		fi.buf = &buf
 		fi.mutex = &sync.RWMutex{}
 	}
-	var f vfs.File = newMemFile(fi.AbsPath(), fi.mutex, fi.buf)
+	var f vfs.File = NewMemFile(fi.AbsPath(), fi.mutex, fi.buf)
 	if hasFlag(os.O_APPEND, flag) {
 		f.Seek(0, os.SEEK_END)
 	}
@@ -297,7 +299,9 @@ func (f *woFile) Read(p []byte) (n int, err error) {
 	return 0, ErrWriteOnly
 }
 
-func (fs *memFS) Remove(name string) error {
+// Remove removes the named file or directory.
+// If there is an error, it will be of type *PathError.
+func (fs *MemFS) Remove(name string) error {
 	fs.lock.Lock()
 	defer fs.lock.Unlock()
 
@@ -314,13 +318,14 @@ func (fs *memFS) Remove(name string) error {
 	return nil
 }
 
-func (fs *memFS) Rename(oldpath, newpath string) error {
+// Rename renames (moves) a file.
+// Handles to the oldpath persist but might return oldpath if Name() is called.
+func (fs *MemFS) Rename(oldpath, newpath string) error {
 	fs.lock.Lock()
 	defer fs.lock.Unlock()
 
 	// OldPath
 	oldpath = filepath.Clean(oldpath)
-	// oldDir, oldBase := filepath.Split(oldpath)
 	fiOldParent, fiOld, err := fs.fileInfo(oldpath)
 	if err != nil {
 		return &os.PathError{"rename", oldpath, err}
@@ -350,7 +355,9 @@ func (fs *memFS) Rename(oldpath, newpath string) error {
 	return nil
 }
 
-func (fs *memFS) Stat(name string) (os.FileInfo, error) {
+// Stat returns the FileInfo structure describing the named file.
+// If there is an error, it will be of type *PathError.
+func (fs *MemFS) Stat(name string) (os.FileInfo, error) {
 	fs.lock.RLock()
 	defer fs.lock.RUnlock()
 
@@ -366,6 +373,9 @@ func (fs *memFS) Stat(name string) (os.FileInfo, error) {
 	return fi, nil
 }
 
-func (fs *memFS) Lstat(name string) (os.FileInfo, error) {
+// Lstat returns a FileInfo describing the named file.
+// MemFS does not support symbolic links.
+// Alias for fs.Stat(name)
+func (fs *MemFS) Lstat(name string) (os.FileInfo, error) {
 	return fs.Stat(name)
 }

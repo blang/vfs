@@ -4,7 +4,7 @@ import "github.com/blang/vfs/memfs"
 
 func ExampleMemFS() {
 	// Create a fully writable filesystem in memory
-	fs := memfs.MemFS()
+	fs := memfs.Create()
 	// Like every other vfs.Filesytem, it could be wrapped, e.g. read-only:
 	// fs = vfs.ReadOnly(fs)
 
