@@ -3,7 +3,6 @@ package memfs
 import (
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	filepath "path"
 	"sort"
@@ -248,10 +247,8 @@ func (fi *fileInfo) File(flag int) (vfs.File, error) {
 	if checkFlag(os.O_RDWR, flag) {
 		return f, nil
 	} else if checkFlag(os.O_WRONLY, flag) {
-		log.Printf("File %s is writeonly", f.Name())
 		f = &woFile{f}
 	} else {
-		log.Printf("File %s is readonly", f.Name())
 		f = &roFile{f}
 	}
 
