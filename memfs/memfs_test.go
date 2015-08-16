@@ -3,40 +3,15 @@ package memfs
 import (
 	"io/ioutil"
 	"os"
+	"testing"
 
 	"github.com/blang/vfs"
-
-	"testing"
 )
 
-func TestReal(t *testing.T) {
-	t.Skip()
-	f, err := os.Create("/tmp/mytestfile")
-	if err != nil {
-		t.Errorf("Error: %s", err)
-	}
-	defer f.Close()
-	_, err = f.Write([]byte("test"))
-	if err != nil {
-		t.Errorf("Error writing test: %s", err)
-	}
-	i, err := f.Seek(0, 0)
-	if i != 0 || err != nil {
-		t.Errorf("Seek error: %d %s", i, err)
-	}
-	err = os.Remove(f.Name())
-	if err != nil {
-		t.Errorf("Unexpected error: %s", err)
-	}
-	b := make([]byte, 4)
-	read, err := f.Read(b)
-	if err != nil || read != 4 {
-		t.Errorf("Read error: %d %s", read, err)
-	}
-	if string(b) != "test" {
-		t.Errorf("Wrong read: %s", string(b))
-	}
-	t.Logf("Name: %s", f.Name())
+func TestInterface(t *testing.T) {
+	var fs vfs.Filesystem
+	fs = MemFS()
+	fs.Mkdir("/tmp", 0777)
 }
 
 func TestCreate(t *testing.T) {
