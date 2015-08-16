@@ -9,6 +9,7 @@ import (
 //	"./file" 			-> []string{".", "file"}
 //	"file" 				-> []string{".", "file"}
 //	"/usr/src/linux/" 	-> []string{"", "usr", "src", "linux"}
+// The returned slice of path segments consists of one more more segments.
 func SplitPath(path string, sep string) []string {
 	path = strings.TrimSpace(path)
 	path = strings.TrimSuffix(path, sep)
