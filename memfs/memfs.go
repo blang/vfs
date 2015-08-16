@@ -13,11 +13,15 @@ import (
 )
 
 var (
-	ErrReadOnly    = errors.New("File is read-only")
-	ErrWriteOnly   = errors.New("File is write-only")
+	// ErrReadOnly is returned if the file is read-only and write operations are disabled.
+	ErrReadOnly = errors.New("File is read-only")
+	// ErrWriteOnly is returned if the file is write-only and read operations are disabled.
+	ErrWriteOnly = errors.New("File is write-only")
+	// ErrIsDirectory is returned if the file under operation is not a regular file but a directory.
 	ErrIsDirectory = errors.New("Is directory")
 )
 
+// PathSeparator used to separate path segments
 const PathSeparator = "/"
 
 type memFS struct {

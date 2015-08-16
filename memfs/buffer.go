@@ -2,11 +2,11 @@ package memfs
 
 import (
 	"errors"
-	"os"
-
 	"io"
+	"os"
 )
 
+// Buffer is a usable block of data similar to a file
 type Buffer interface {
 	io.Reader
 	io.Writer
@@ -14,24 +14,30 @@ type Buffer interface {
 	io.Closer
 }
 
+// MinBufferSize is the minimal initial allocated buffer size
 const MinBufferSize = 512
 
-var (
-	ErrTooLarge = errors.New("Volume too large")
-)
+// ErrTooLarge is thrown if it was not possible to enough memory
+var ErrTooLarge = errors.New("Volume too large")
 
 type buffer struct {
 	buf *[]byte
 	ptr int64
 }
 
-// NewVolume creates a new data volume based on a buffer
+// NewBuffer creates a new data volume based on a buffer
 func NewBuffer(buf *[]byte) Buffer {
 	return &buffer{
 		buf: buf,
 	}
 }
 
+// Seek sets the offset for the next Read or Write on the buffer to offset,
+// interpreted according to whence:
+// 	0 (os.SEEK_SET) means relative to the origin of the file
+// 	1 (os.SEEK_CUR) means relative to the current offset
+// 	2 (os.SEEK_END) means relative to the end of the file
+// It returns the new offset and an error, if any.
 func (v *buffer) Seek(offset int64, whence int) (int64, error) {
 	var abs int64
 	switch whence {
@@ -54,6 +60,9 @@ func (v *buffer) Seek(offset int64, whence int) (int64, error) {
 	return abs, nil
 }
 
+// Write writes len(p) byte to the Buffer.
+// It returns the number of bytes written and an error if any.
+// Write returns non-nil error when n!=len(p).
 func (v *buffer) Write(p []byte) (int, error) {
 	l := len(p)
 	err := v.grow(l)
@@ -65,11 +74,14 @@ func (v *buffer) Write(p []byte) (int, error) {
 	return l, nil
 }
 
-// TODO: Change?
+// Close the buffer. Currently no effect.
 func (v *buffer) Close() error {
 	return nil
 }
 
+// Read reads len(p) byte from the Buffer starting at the current offset.
+// It returns the number of bytes read and an error if any.
+// Returns io.EOF error if pointer is at the end of the Buffer.
 func (v *buffer) Read(p []byte) (n int, err error) {
 	if len(p) == 0 {
 		return 0, nil
