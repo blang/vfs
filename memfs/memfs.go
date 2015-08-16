@@ -6,7 +6,6 @@ import (
 	"os"
 	filepath "path"
 	"sort"
-	"strings"
 	"sync"
 	"time"
 
@@ -14,8 +13,9 @@ import (
 )
 
 var (
-	ErrReadOnly  = errors.New("File is read-only")
-	ErrWriteOnly = errors.New("File is write-only")
+	ErrReadOnly    = errors.New("File is read-only")
+	ErrWriteOnly   = errors.New("File is write-only")
+	ErrIsDirectory = errors.New("Is directory")
 )
 
 const PathSeparator = "/"
@@ -89,22 +89,16 @@ func MemFS() vfs.Filesystem {
 // Mkdir creates a new directory with given permissions
 func (fs *memFS) Mkdir(name string, perm os.FileMode) error {
 	name = filepath.Clean(name)
-	dirPath, base := filepath.Split(name)
-	parent, err := fs.findFileinfo(dirPath)
+	base := filepath.Base(name)
+	parent, fi, err := fs.fileInfo(name)
 	if err != nil {
 		return &os.PathError{"mkdir", name, err}
 	}
-
-	if parent.childs == nil {
-		parent.childs = make(map[string]*fileInfo)
-	} else {
-		// Check if dir already exists
-		if _, ok := parent.childs[base]; ok {
-			return &os.PathError{"mkdir", name, fmt.Errorf("Directory %q already exists", name)}
-		}
+	if fi != nil {
+		return &os.PathError{"mkdir", name, fmt.Errorf("Directory %q already exists", name)}
 	}
 
-	fi := &fileInfo{
+	fi = &fileInfo{
 		name:   base,
 		dir:    true,
 		mode:   perm,
@@ -129,12 +123,12 @@ func (f byName) Swap(i, j int) { f[i], f[j] = f[j], f[i] }
 
 func (fs *memFS) ReadDir(path string) ([]os.FileInfo, error) {
 	path = filepath.Clean(path)
-	fi, err := fs.findFileinfo(path)
+	_, fi, err := fs.fileInfo(path)
 	if err != nil {
 		return nil, &os.PathError{"readdir", path, err}
 	}
-	if !fi.dir {
-		return nil, &os.PathError{"readdir", path, errors.New("Not a directory")}
+	if fi == nil || !fi.dir {
+		return nil, &os.PathError{"readdir", path, os.ErrNotExist}
 	}
 
 	fis := make([]os.FileInfo, 0, len(fi.childs))
@@ -145,41 +139,54 @@ func (fs *memFS) ReadDir(path string) ([]os.FileInfo, error) {
 	return fis, nil
 }
 
-// findFileinfo searches the filetree beginning at root and returns the fileInfo of the file at path
-func (fs *memFS) findFileinfo(dir string) (*fileInfo, error) {
-	dir = filepath.Clean(dir)
-	segments := SplitPath(dir, PathSeparator)
+func (fs *memFS) fileInfo(path string) (parent *fileInfo, node *fileInfo, err error) {
+	path = filepath.Clean(path)
+	segments := SplitPath(path, PathSeparator)
+
+	// Shortcut for working directory and root
 	if len(segments) == 1 {
 		if segments[0] == "" {
-			return fs.root, nil
+			return nil, fs.root, nil
 		} else if segments[0] == "." {
-			return fs.wd, nil
+			return fs.wd.parent, fs.wd, nil
 		}
 	}
 
-	// log.Printf("Dir: %s, Segments: %q (%d)", dir, segments, len(segments))
-	parent := fs.root
-	if len(segments) > 0 && segments[0] == "." {
-		segments = segments[1:]
+	// Determine root to traverse
+	parent = fs.root
+	if segments[0] == "." {
 		parent = fs.wd
 	}
-	if len(segments) > 0 && strings.TrimSpace(segments[0]) == "" {
-		segments = segments[1:]
-	}
-	// TODO: Could not find files? check parent.dir before every iteration?
-	for i, seg := range segments {
-		if parent.childs == nil {
-			return parent, fmt.Errorf("Directory parent %q does not exist: %q", filepath.Join(segments[:i]...))
+	segments = segments[1:]
+
+	// Further directories
+	if len(segments) > 1 {
+		for i, seg := range segments[:len(segments)-1] {
+
+			if parent.childs == nil {
+				return nil, nil, fmt.Errorf("Directory parent %q does not exist: %q", filepath.Join(segments[:i]...))
+			}
+			if entry, ok := parent.childs[seg]; ok && entry.dir {
+				parent = entry
+			} else {
+				return nil, nil, fmt.Errorf("Directory parent %q does not exist: %q", filepath.Join(segments[:i]...))
+			}
 		}
-		if entry, ok := parent.childs[seg]; ok && entry.dir {
-			parent = entry
-		} else {
-			return parent, fmt.Errorf("Directory parent %q does not exist: %q", filepath.Join(segments[:i]...))
-		}
 	}
-	return parent, nil
+
+	lastSeg := segments[len(segments)-1]
+	if parent.childs != nil {
+		if node, ok := parent.childs[lastSeg]; ok {
+			return parent, node, nil
+		}
+	} else {
+		parent.childs = make(map[string]*fileInfo)
+	}
+
+	return parent, nil, nil
 }
 
+// Create a new file handle. Will truncate file if it already exist.
 func (fs *memFS) Create(name string) (vfs.File, error) {
 	return fs.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
 }
@@ -188,56 +195,49 @@ func checkFlag(flag int, flags int) bool {
 	return flags&flag == flag
 }
 
+// OpenFile opens a file handle with a specified flag (os.O_RDONLY etc.) and perm (e.g. 0666).
+// If success the returned File can be used for I/O. Otherwise an error is returned, which
+// is a *os.PathError and can be extracted for further information.
 func (fs *memFS) OpenFile(name string, flag int, perm os.FileMode) (vfs.File, error) {
 	name = filepath.Clean(name)
-	dir, base := filepath.Split(name)
-	fiParent, err := fs.findFileinfo(dir)
+	base := filepath.Base(name)
+	fiParent, fiNode, err := fs.fileInfo(name)
 	if err != nil {
-		return nil, err
+		return nil, &os.PathError{"open", name, err}
 	}
 
-	var fi *fileInfo
 	if checkFlag(os.O_CREATE, flag) {
-		if fiParent.childs == nil {
-			fiParent.childs = make(map[string]*fileInfo)
-		} else {
-			if _, ok := fiParent.childs[base]; ok {
+		if fiNode != nil {
 
-				// If O_TRUNC is set, existing file is overwritten
-				if !checkFlag(os.O_TRUNC, flag) {
-					return nil, os.ErrExist
-				}
+			// If O_TRUNC is set, existing file is overwritten
+			if !checkFlag(os.O_TRUNC, flag) {
+				return nil, &os.PathError{"open", name, os.ErrExist}
 			}
 		}
-		fi = &fileInfo{
+		fiNode = &fileInfo{
 			name:   base,
 			dir:    false,
 			mode:   perm,
 			parent: fiParent,
 			fs:     fs,
 		}
-		fiParent.childs[base] = fi
+		fiParent.childs[base] = fiNode
 	} else { // find existing
-		if fiParent.childs == nil {
-			return nil, os.ErrNotExist
+		if fiNode == nil {
+			return nil, &os.PathError{"open", name, os.ErrNotExist}
 		}
-		var ok bool
-		fi, ok = fiParent.childs[base]
-		if !ok {
-			return nil, os.ErrNotExist
+		if fiNode.dir {
+			return nil, &os.PathError{"open", name, ErrIsDirectory}
 		}
-
 	}
 
-	return fi.File(flag)
+	return fiNode.file(flag)
 }
 
-func (fi *fileInfo) File(flag int) (vfs.File, error) {
+func (fi *fileInfo) file(flag int) (vfs.File, error) {
 	if fi.buf == nil || checkFlag(os.O_TRUNC, flag) {
 		buf := make([]byte, 0, MinBufferSize)
 		fi.buf = &buf
-	}
-	if fi.mutex == nil {
 		fi.mutex = &sync.RWMutex{}
 	}
 	var f vfs.File = newMemFile(fi.AbsPath(), fi.mutex, fi.buf)
@@ -277,63 +277,61 @@ func (f *woFile) Read(p []byte) (n int, err error) {
 
 func (fs *memFS) Remove(name string) error {
 	name = filepath.Clean(name)
-	dir, base := filepath.Split(name)
-	fiParent, err := fs.findFileinfo(dir)
+	fiParent, fiNode, err := fs.fileInfo(name)
 	if err != nil {
 		return &os.PathError{"remove", name, err}
 	}
-	if _, ok := fiParent.childs[base]; ok {
-		delete(fiParent.childs, base)
-		return nil
+	if fiNode == nil {
+		return &os.PathError{"remove", name, os.ErrNotExist}
 	}
-	return &os.PathError{"remove", name, os.ErrNotExist}
+
+	delete(fiParent.childs, fiNode.name)
+	return nil
 }
 
 func (fs *memFS) Rename(oldpath, newpath string) error {
 	// OldPath
 	oldpath = filepath.Clean(oldpath)
-	oldDir, oldBase := filepath.Split(oldpath)
-	fiOldParent, err := fs.findFileinfo(oldDir)
+	// oldDir, oldBase := filepath.Split(oldpath)
+	fiOldParent, fiOld, err := fs.fileInfo(oldpath)
 	if err != nil {
 		return &os.PathError{"rename", oldpath, err}
 	}
-	fiOld, ok := fiOldParent.childs[oldBase]
-	if !ok {
+	if fiOld == nil {
 		return &os.PathError{"rename", oldpath, os.ErrNotExist}
 	}
 
 	newpath = filepath.Clean(newpath)
-	newDir, newBase := filepath.Split(newpath)
-	fiNewParent, err := fs.findFileinfo(newDir)
+	fiNewParent, fiNew, err := fs.fileInfo(newpath)
 	if err != nil {
 		return &os.PathError{"rename", newpath, err}
 	}
 
-	if fiNewParent.childs == nil {
-		fiNewParent.childs = make(map[string]*fileInfo)
-	}
-
-	if _, ok := fiNewParent.childs[newBase]; ok {
+	if fiNew != nil {
 		return &os.PathError{"rename", newpath, os.ErrExist}
 	}
 
-	delete(fiOldParent.childs, oldBase)
+	newBase := filepath.Base(newpath)
+
+	// Relink
+	delete(fiOldParent.childs, fiOld.name)
 	fiOld.parent = fiNewParent
-	fiNewParent.childs[newBase] = fiOld
+	fiOld.name = newBase
+	fiNewParent.childs[fiOld.name] = fiOld
 	return nil
 }
 
 func (fs *memFS) Stat(name string) (os.FileInfo, error) {
 	name = filepath.Clean(name)
-	dir, base := filepath.Split(name)
-	fiParent, err := fs.findFileinfo(dir)
+	// dir, base := filepath.Split(name)
+	_, fi, err := fs.fileInfo(name)
 	if err != nil {
 		return nil, &os.PathError{"stat", name, err}
 	}
-	if fi, ok := fiParent.childs[base]; ok {
-		return fi, nil
+	if fi == nil {
+		return nil, &os.PathError{"stat", name, os.ErrNotExist}
 	}
-	return nil, &os.PathError{"stat", name, os.ErrNotExist}
+	return fi, nil
 }
 
 func (fs *memFS) Lstat(name string) (os.FileInfo, error) {
