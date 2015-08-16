@@ -44,6 +44,9 @@ func (fi fileInfo) Sys() interface{} {
 }
 
 func (fi fileInfo) Size() int64 {
+	if fi.dir {
+		return 0
+	}
 	fi.mutex.RLock()
 	l := len(*(fi.buf))
 	fi.mutex.RUnlock()
@@ -54,6 +57,11 @@ func (fi fileInfo) IsDir() bool {
 	return fi.dir
 }
 
+// ModTime returns the modification time.
+// Modification time is updated on:
+// 	- Creation
+// 	- Rename
+// 	- Open
 func (fi fileInfo) ModTime() time.Time {
 	return fi.modTime
 }
@@ -88,6 +96,8 @@ func MemFS() vfs.Filesystem {
 
 // Mkdir creates a new directory with given permissions
 func (fs *memFS) Mkdir(name string, perm os.FileMode) error {
+	fs.lock.Lock()
+	defer fs.lock.Unlock()
 	name = filepath.Clean(name)
 	base := filepath.Base(name)
 	parent, fi, err := fs.fileInfo(name)
@@ -99,11 +109,12 @@ func (fs *memFS) Mkdir(name string, perm os.FileMode) error {
 	}
 
 	fi = &fileInfo{
-		name:   base,
-		dir:    true,
-		mode:   perm,
-		parent: parent,
-		fs:     fs,
+		name:    base,
+		dir:     true,
+		mode:    perm,
+		parent:  parent,
+		modTime: time.Now(),
+		fs:      fs,
 	}
 	parent.childs[base] = fi
 	return nil
@@ -122,6 +133,9 @@ func (f byName) Less(i, j int) bool { return f[i].Name() < f[j].Name() }
 func (f byName) Swap(i, j int) { f[i], f[j] = f[j], f[i] }
 
 func (fs *memFS) ReadDir(path string) ([]os.FileInfo, error) {
+	fs.lock.RLock()
+	defer fs.lock.RUnlock()
+
 	path = filepath.Clean(path)
 	_, fi, err := fs.fileInfo(path)
 	if err != nil {
@@ -199,6 +213,9 @@ func checkFlag(flag int, flags int) bool {
 // If success the returned File can be used for I/O. Otherwise an error is returned, which
 // is a *os.PathError and can be extracted for further information.
 func (fs *memFS) OpenFile(name string, flag int, perm os.FileMode) (vfs.File, error) {
+	fs.lock.Lock()
+	defer fs.lock.Unlock()
+
 	name = filepath.Clean(name)
 	base := filepath.Base(name)
 	fiParent, fiNode, err := fs.fileInfo(name)
@@ -215,11 +232,12 @@ func (fs *memFS) OpenFile(name string, flag int, perm os.FileMode) (vfs.File, er
 			}
 		}
 		fiNode = &fileInfo{
-			name:   base,
-			dir:    false,
-			mode:   perm,
-			parent: fiParent,
-			fs:     fs,
+			name:    base,
+			dir:     false,
+			mode:    perm,
+			parent:  fiParent,
+			modTime: time.Now(),
+			fs:      fs,
 		}
 		fiParent.childs[base] = fiNode
 	} else { // find existing
@@ -230,7 +248,7 @@ func (fs *memFS) OpenFile(name string, flag int, perm os.FileMode) (vfs.File, er
 			return nil, &os.PathError{"open", name, ErrIsDirectory}
 		}
 	}
-
+	fiNode.modTime = time.Now()
 	return fiNode.file(flag)
 }
 
@@ -276,6 +294,9 @@ func (f *woFile) Read(p []byte) (n int, err error) {
 }
 
 func (fs *memFS) Remove(name string) error {
+	fs.lock.Lock()
+	defer fs.lock.Unlock()
+
 	name = filepath.Clean(name)
 	fiParent, fiNode, err := fs.fileInfo(name)
 	if err != nil {
@@ -290,6 +311,9 @@ func (fs *memFS) Remove(name string) error {
 }
 
 func (fs *memFS) Rename(oldpath, newpath string) error {
+	fs.lock.Lock()
+	defer fs.lock.Unlock()
+
 	// OldPath
 	oldpath = filepath.Clean(oldpath)
 	// oldDir, oldBase := filepath.Split(oldpath)
@@ -317,11 +341,15 @@ func (fs *memFS) Rename(oldpath, newpath string) error {
 	delete(fiOldParent.childs, fiOld.name)
 	fiOld.parent = fiNewParent
 	fiOld.name = newBase
+	fiOld.modTime = time.Now()
 	fiNewParent.childs[fiOld.name] = fiOld
 	return nil
 }
 
 func (fs *memFS) Stat(name string) (os.FileInfo, error) {
+	fs.lock.RLock()
+	defer fs.lock.RUnlock()
+
 	name = filepath.Clean(name)
 	// dir, base := filepath.Split(name)
 	_, fi, err := fs.fileInfo(name)
