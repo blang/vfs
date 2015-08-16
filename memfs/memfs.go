@@ -205,7 +205,7 @@ func (fs *memFS) Create(name string) (vfs.File, error) {
 	return fs.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
 }
 
-func checkFlag(flag int, flags int) bool {
+func hasFlag(flag int, flags int) bool {
 	return flags&flag == flag
 }
 
@@ -223,11 +223,11 @@ func (fs *memFS) OpenFile(name string, flag int, perm os.FileMode) (vfs.File, er
 		return nil, &os.PathError{"open", name, err}
 	}
 
-	if checkFlag(os.O_CREATE, flag) {
+	if hasFlag(os.O_CREATE, flag) {
 		if fiNode != nil {
 
 			// If O_TRUNC is set, existing file is overwritten
-			if !checkFlag(os.O_TRUNC, flag) {
+			if !hasFlag(os.O_TRUNC, flag) {
 				return nil, &os.PathError{"open", name, os.ErrExist}
 			}
 		}
@@ -253,18 +253,18 @@ func (fs *memFS) OpenFile(name string, flag int, perm os.FileMode) (vfs.File, er
 }
 
 func (fi *fileInfo) file(flag int) (vfs.File, error) {
-	if fi.buf == nil || checkFlag(os.O_TRUNC, flag) {
+	if fi.buf == nil || hasFlag(os.O_TRUNC, flag) {
 		buf := make([]byte, 0, MinBufferSize)
 		fi.buf = &buf
 		fi.mutex = &sync.RWMutex{}
 	}
 	var f vfs.File = newMemFile(fi.AbsPath(), fi.mutex, fi.buf)
-	if checkFlag(os.O_APPEND, flag) {
+	if hasFlag(os.O_APPEND, flag) {
 		f.Seek(0, os.SEEK_END)
 	}
-	if checkFlag(os.O_RDWR, flag) {
+	if hasFlag(os.O_RDWR, flag) {
 		return f, nil
-	} else if checkFlag(os.O_WRONLY, flag) {
+	} else if hasFlag(os.O_WRONLY, flag) {
 		f = &woFile{f}
 	} else {
 		f = &roFile{f}
