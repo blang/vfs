@@ -44,7 +44,7 @@ Why should I use this lib?
 - Easy to create your own filesystem
 - Mock a full filesystem for testing (or use included `memfs`)
 - Compose/Wrap Filesystems `ReadOnly(OS())` and write simple Wrappers
-- Many features, see [GoDocs](http://godoc.org/github.com/blang/vfs) and examples blow
+- Many features, see [GoDocs](http://godoc.org/github.com/blang/vfs) and examples below
 
 Example
 -----
