@@ -99,6 +99,11 @@ func (fi fileInfo) AbsPath() string {
 	return "/"
 }
 
+// PathSeparator returns the path separator
+func (fs *MemFS) PathSeparator() uint8 {
+	return '/'
+}
+
 // Mkdir creates a new directory with given permissions
 func (fs *MemFS) Mkdir(name string, perm os.FileMode) error {
 	fs.lock.Lock()
@@ -148,7 +153,7 @@ func (fs *MemFS) ReadDir(path string) ([]os.FileInfo, error) {
 		return nil, &os.PathError{"readdir", path, err}
 	}
 	if fi == nil || !fi.dir {
-		return nil, &os.PathError{"readdir", path, os.ErrNotExist}
+		return nil, &os.PathError{"readdir", path, vfs.ErrNotDirectory}
 	}
 
 	fis := make([]os.FileInfo, 0, len(fi.childs))
@@ -161,7 +166,7 @@ func (fs *MemFS) ReadDir(path string) ([]os.FileInfo, error) {
 
 func (fs *MemFS) fileInfo(path string) (parent *fileInfo, node *fileInfo, err error) {
 	path = filepath.Clean(path)
-	segments := SplitPath(path, PathSeparator)
+	segments := vfs.SplitPath(path, PathSeparator)
 
 	// Shortcut for working directory and root
 	if len(segments) == 1 {
@@ -181,15 +186,15 @@ func (fs *MemFS) fileInfo(path string) (parent *fileInfo, node *fileInfo, err er
 
 	// Further directories
 	if len(segments) > 1 {
-		for i, seg := range segments[:len(segments)-1] {
+		for _, seg := range segments[:len(segments)-1] {
 
 			if parent.childs == nil {
-				return nil, nil, fmt.Errorf("Directory parent %q does not exist: %q", filepath.Join(segments[:i]...))
+				return nil, nil, os.ErrNotExist
 			}
 			if entry, ok := parent.childs[seg]; ok && entry.dir {
 				parent = entry
 			} else {
-				return nil, nil, fmt.Errorf("Directory parent %q does not exist: %q", filepath.Join(segments[:i]...))
+				return nil, nil, os.ErrNotExist
 			}
 		}
 	}
@@ -204,11 +209,6 @@ func (fs *MemFS) fileInfo(path string) (parent *fileInfo, node *fileInfo, err er
 	}
 
 	return parent, nil, nil
-}
-
-// Create a new file handle. Will truncate file if it already exist.
-func (fs *MemFS) Create(name string) (vfs.File, error) {
-	return fs.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
 }
 
 func hasFlag(flag int, flags int) bool {

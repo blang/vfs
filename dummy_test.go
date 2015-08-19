@@ -9,9 +9,6 @@ var errDum = errors.New("Dummy error")
 
 func TestDummyFS(t *testing.T) {
 	fs := Dummy(errDum)
-	if _, err := fs.Create("test"); err != errDum {
-		t.Errorf("Create DummyError expected: %s", err)
-	}
 	if _, err := fs.OpenFile("test", 0, 0); err != errDum {
 		t.Errorf("OpenFile DummyError expected: %s", err)
 	}

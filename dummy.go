@@ -2,6 +2,7 @@ package vfs
 
 import (
 	"os"
+	"time"
 )
 
 // Dummy creates a new dummy filesystem which returns the given error on every operation.
@@ -15,9 +16,9 @@ type DummyFS struct {
 	err error
 }
 
-// Create returns dummy error
-func (fs DummyFS) Create(name string) (File, error) {
-	return nil, fs.err
+// PathSeparator returns the path separator
+func (fs DummyFS) PathSeparator() uint8 {
+	return '/'
 }
 
 // OpenFile returns dummy error
@@ -98,4 +99,45 @@ func (f DumFile) Read(p []byte) (n int, err error) {
 // Seek returns dummy error
 func (f DumFile) Seek(offset int64, whence int) (int64, error) {
 	return 0, f.err
+}
+
+// DumFileInfo mocks a os.FileInfo returning default values on every operation
+// Struct fields can be set.
+type DumFileInfo struct {
+	IName    string
+	ISize    int64
+	IMode    os.FileMode
+	IModTime time.Time
+	IDir     bool
+	ISys     interface{}
+}
+
+// Name returns the field IName
+func (fi DumFileInfo) Name() string {
+	return fi.IName
+}
+
+// Size returns the field ISize
+func (fi DumFileInfo) Size() int64 {
+	return fi.ISize
+}
+
+// Mode returns the field IMode
+func (fi DumFileInfo) Mode() os.FileMode {
+	return fi.IMode
+}
+
+// ModTime returns the field IModTime
+func (fi DumFileInfo) ModTime() time.Time {
+	return fi.IModTime
+}
+
+// IsDir returns the field IDir
+func (fi DumFileInfo) IsDir() bool {
+	return fi.IDir
+}
+
+// Sys returns the field ISys
+func (fi DumFileInfo) Sys() interface{} {
+	return fi.ISys
 }

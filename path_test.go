@@ -1,4 +1,4 @@
-package memfs
+package vfs
 
 import (
 	"reflect"

@@ -29,11 +29,6 @@ type RoFS struct {
 // ErrorReadOnly is returned on every disabled operation.
 var ErrReadOnly = errors.New("Filesystem is read-only")
 
-// Create is disabled and returns ErrorReadOnly
-func (fs RoFS) Create(name string) (File, error) {
-	return nil, ErrReadOnly
-}
-
 // Remove is disabled and returns ErrorReadOnly
 func (fs RoFS) Remove(name string) error {
 	return ErrReadOnly

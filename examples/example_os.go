@@ -11,7 +11,9 @@ func ExampleBasicOS() {
 		fatal("Error creating directory: %s\n", err)
 	}
 
-	f, err := osFS.Create("/tmp/vfs/example.txt")
+	// Convenience method
+	f, err := vfs.Create(osFS, "/tmp/vfs/example.txt")
+	// f, err := osFS.OpenFile("/tmp/vfs/example.txt", os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
 		fatal("Could not create file: %s\n", err)
 	}

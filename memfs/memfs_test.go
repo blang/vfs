@@ -18,7 +18,7 @@ func TestCreate(t *testing.T) {
 	fs := Create()
 	// Create file with absolute path
 	{
-		f, err := fs.Create("/testfile")
+		f, err := fs.OpenFile("/testfile", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
 		if err != nil {
 			t.Fatalf("Unexpected error creating file: %s", err)
 		}
@@ -29,7 +29,7 @@ func TestCreate(t *testing.T) {
 
 	// Create same file twice, no error because os.O_TRUNC is used
 	{
-		_, err := fs.Create("/testfile")
+		_, err := fs.OpenFile("/testfile", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
 		if err != nil {
 			t.Fatalf("Expected error creating file: %s", err)
 		}
@@ -38,7 +38,7 @@ func TestCreate(t *testing.T) {
 
 	// Create file with unkown parent
 	{
-		_, err := fs.Create("/testfile/testfile")
+		_, err := fs.OpenFile("/testfile/testfile", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
 		if err == nil {
 			t.Errorf("Expected error creating file")
 		}
@@ -46,7 +46,7 @@ func TestCreate(t *testing.T) {
 
 	// Create file with relative path (workingDir == root)
 	{
-		f, err := fs.Create("relFile")
+		f, err := fs.OpenFile("relFile", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
 		if err != nil {
 			t.Fatalf("Unexpected error creating file: %s", err)
 		}
@@ -121,7 +121,7 @@ func TestReadDir(t *testing.T) {
 			t.Fatalf("Unexpected error creating directory %q: %s", dir, err)
 		}
 	}
-	f, err := fs.Create("/home/README.txt")
+	f, err := fs.OpenFile("/home/README.txt", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
 	if err != nil {
 		t.Fatalf("Unexpected error creating file: %s", err)
 	}
@@ -170,7 +170,7 @@ func TestRemove(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Mkdir error: %s", err)
 	}
-	f, err := fs.Create("/tmp/README.txt")
+	f, err := fs.OpenFile("/tmp/README.txt", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
 	if err != nil {
 		t.Fatalf("Create error: %s", err)
 	}

@@ -13,9 +13,9 @@ func OS() *OsFS {
 	return &OsFS{}
 }
 
-// Create wraps os.Create
-func (fs OsFS) Create(name string) (File, error) {
-	return os.Create(name)
+// PathSeparator returns the path separator
+func (fs OsFS) PathSeparator() uint8 {
+	return os.PathSeparator
 }
 
 // OpenFile wraps os.OpenFile

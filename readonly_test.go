@@ -13,13 +13,6 @@ var (
 	ro          = ReadOnly(baseFSDummy)
 )
 
-func TestROCreate(t *testing.T) {
-	_, err := ro.Create("/tmp/test123")
-	if err != ErrReadOnly {
-		t.Fatalf("Create error expected")
-	}
-}
-
 func TestROOpenFileFlags(t *testing.T) {
 	_, err := ro.OpenFile("name", os.O_CREATE, 0666)
 	if err != ErrReadOnly {

@@ -1,13 +1,14 @@
 package vfs
 
 import (
+	"os"
 	"testing"
 )
 
 func TestOSCreate(t *testing.T) {
 	fs := OS()
 
-	f, err := fs.Create("/tmp/test123")
+	f, err := fs.OpenFile("/tmp/test123", os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
 		t.Errorf("Create: %s", err)
 	}
