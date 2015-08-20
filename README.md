@@ -58,6 +58,7 @@ Features
 - ReadOnly Wrapper 
 - DummyFS for quick mocking
 - MemFS full in-memory filesystem
+- MountFS - support mounts across filesystems
 
 Current state: ALPHA
 -----
