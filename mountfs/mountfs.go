@@ -12,6 +12,7 @@ import (
 // can not act across filesystem boundaries.
 var ErrBoundary = errors.New("Crossing boundary")
 
+// Create a new MountFS based on a root filesystem.
 func Create(rootFS vfs.Filesystem) *MountFS {
 	return &MountFS{
 		rootFS:  rootFS,
