@@ -1,4 +1,4 @@
-vfs for golang [![Build Status](https://drone.io/github.com/blang/vfs/status.png)](https://drone.io/github.com/blang/vfs/latest) [![GoDoc](https://godoc.org/github.com/blang/vfs?status.png)](https://godoc.org/github.com/blang/vfs) [![Coverage Status](https://img.shields.io/coveralls/blang/vfs.svg)](https://coveralls.io/r/blang/vfs?branch=master)
+vfs for golang [![Build Status](https://drone.io/github.com/blang/vfs/status.png)](https://drone.io/github.com/blang/vfs/latest) [![GoDoc](https://godoc.org/github.com/blang/vfs?status.png)](https://godoc.org/github.com/blang/vfs) [![Coverage Status](https://img.shields.io/coveralls/blang/vfs.svg)](https://coveralls.io/r/blang/vfs?branch=master) [![Join the chat at https://gitter.im/blang/vfs](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/blang/vfs?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 ======
 
 vfs is library to support virtual filesystems. It provides basic abstractions of filesystems and implementations, like `OS` accessing the file system of the underlying OS and `memfs` a full filesystem in-memory.
