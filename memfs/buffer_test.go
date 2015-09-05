@@ -2,6 +2,7 @@ package memfs
 
 import (
 	"os"
+	"strings"
 
 	"testing"
 )
@@ -9,6 +10,10 @@ import (
 const (
 	dots = "1....2....3....4"
 	abc  = "abcdefghijklmnop"
+)
+
+var (
+	large = strings.Repeat("0123456789", 200) // 2000 bytes
 )
 
 func TestWrite(t *testing.T) {
@@ -67,6 +72,25 @@ func TestWrite(t *testing.T) {
 	// Seek 8 forwards
 	if n, err := v.Seek(int64(len(abc)/2), os.SEEK_CUR); err != nil || n != int64(16)+int64(len(abc)/2) {
 		t.Errorf("Invalid seek result: %d %s", n, err)
+	}
+
+	// Seek to end
+	if n, err := v.Seek(0, os.SEEK_END); err != nil || n != int64(len(buf)) {
+		t.Errorf("Invalid seek result: %d %s", n, err)
+	}
+
+	// Write so that buffer must expand more than 2x
+	if n, err := v.Write([]byte(large)); err != nil {
+		t.Errorf("Unexpected error: %s", err)
+	} else if n != len(large) {
+		t.Errorf("Invalid write count: %d", n)
+	}
+	if s := string(buf[:len(dots+abc+large)]); s != dots+abc+large {
+		t.Errorf("Invalid buffer content: %q", s)
+	}
+
+	if len(buf) != len(dots)+len(abc)+len(large) {
+		t.Errorf("Origin buffer did not grow: len=%d, cap=%d", len(buf), cap(buf))
 	}
 }
 
