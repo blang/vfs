@@ -99,7 +99,11 @@ func (v *Buf) Read(p []byte) (n int, err error) {
 func (v *Buf) grow(n int) error {
 	m := len(*v.buf)
 	if (m + n) > cap(*v.buf) {
-		buf, err := makeSlice(2*cap(*v.buf) + MinBufferSize)
+		size := 2*cap(*v.buf) + MinBufferSize
+		if size < n {
+			size = n + MinBufferSize
+		}
+		buf, err := makeSlice(size)
 		if err != nil {
 			return err
 		}
