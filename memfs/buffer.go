@@ -100,8 +100,8 @@ func (v *Buf) grow(n int) error {
 	m := len(*v.buf)
 	if (m + n) > cap(*v.buf) {
 		size := 2*cap(*v.buf) + MinBufferSize
-		if size < n {
-			size = n + MinBufferSize
+		if size < m+n {
+			size = m + n + MinBufferSize
 		}
 		buf, err := makeSlice(size)
 		if err != nil {
