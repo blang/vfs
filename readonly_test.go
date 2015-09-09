@@ -13,6 +13,10 @@ var (
 	ro          = ReadOnly(baseFSDummy)
 )
 
+func TestROInterface(t *testing.T) {
+	_ = Filesystem(ro)
+}
+
 func TestROOpenFileFlags(t *testing.T) {
 	_, err := ro.OpenFile("name", os.O_CREATE, 0666)
 	if err != ErrReadOnly {

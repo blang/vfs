@@ -7,6 +7,10 @@ import (
 
 var errDum = errors.New("Dummy error")
 
+func TestInterface(t *testing.T) {
+	_ = Filesystem(Dummy(errDum))
+}
+
 func TestDummyFS(t *testing.T) {
 	fs := Dummy(errDum)
 	if _, err := fs.OpenFile("test", 0, 0); err != errDum {

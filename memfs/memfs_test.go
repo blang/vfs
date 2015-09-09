@@ -9,9 +9,7 @@ import (
 )
 
 func TestInterface(t *testing.T) {
-	var fs vfs.Filesystem
-	fs = Create()
-	fs.Mkdir("/tmp", 0777)
+	_ = vfs.Filesystem(Create())
 }
 
 func TestCreate(t *testing.T) {

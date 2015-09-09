@@ -5,6 +5,10 @@ import (
 	"testing"
 )
 
+func TestOSInterface(t *testing.T) {
+	_ = Filesystem(OS())
+}
+
 func TestOSCreate(t *testing.T) {
 	fs := OS()
 
