@@ -32,6 +32,10 @@ func TestDummyFS(t *testing.T) {
 	}
 }
 
+func TestFileInterface(t *testing.T) {
+	_ = File(DummyFile(errDum))
+}
+
 func TestDummyFile(t *testing.T) {
 	f := DummyFile(errDum)
 	if name := f.Name(); name != "dummy" {
@@ -48,5 +52,8 @@ func TestDummyFile(t *testing.T) {
 	}
 	if _, err := f.Seek(0, 0); err != errDum {
 		t.Errorf("Seek DummyError expected: %s", err)
+	}
+	if err := f.Sync(); err != errDum {
+		t.Errorf("Sync DummyError expected: %s", err)
 	}
 }

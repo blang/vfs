@@ -29,6 +29,11 @@ func (b MemFile) Name() string {
 	return b.name
 }
 
+// Sync has no effect
+func (b MemFile) Sync() error {
+	return nil
+}
+
 // Read reads len(p) byte from the underlying buffer starting at the current offset.
 // It returns the number of bytes read and an error if any.
 // Returns io.EOF error if pointer is at the end of the Buffer.

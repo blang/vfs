@@ -81,6 +81,11 @@ func (f DumFile) Name() string {
 	return "dummy"
 }
 
+// Sync returns dummy error
+func (f DumFile) Sync() error {
+	return f.err
+}
+
 // Close returns dummy error
 func (f DumFile) Close() error {
 	return f.err

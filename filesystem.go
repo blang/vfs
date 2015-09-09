@@ -36,6 +36,7 @@ type Filesystem interface {
 //   osfile.Stat() -> filesystem.Stat(file.Name())
 type File interface {
 	Name() string
+	Sync() error
 	io.Reader
 	io.Writer
 	io.Seeker
