@@ -1,4 +1,4 @@
-package examples
+package mountfs_test
 
 import (
 	"github.com/blang/vfs"
@@ -11,7 +11,8 @@ func ExampleMountFS() {
 	// The root fs is accessing the filesystem of the underlying OS
 	fs := mountfs.Create(vfs.OS())
 
-	// Mount a memfs inside
+	// Mount a memfs inside /memfs
+	// /memfs may not exist
 	fs.Mount(memfs.Create(), "/memfs")
 
 	// This will create /testdir inside the memfs

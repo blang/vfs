@@ -16,22 +16,40 @@ import github.com/blang/vfs
 
 ```go
 // Create a vfs accessing the filesystem of the underlying OS
-fs := vfs.OS()
-fs.Mkdir("/tmp", 0777)
+var osfs vfs.Filesystem = vfs.OS()
+osfs.Mkdir("/tmp", 0777)
 
 // Make the filesystem read-only:
-fs = vfs.ReadOnly(fs) // Simply wrap filesystems to change its behaviour
+osfs = vfs.ReadOnly(osfs) // Simply wrap filesystems to change its behaviour
 
 // os.O_CREATE will fail and return vfs.ErrReadOnly
 // os.O_RDWR is supported but Write(..) on the file is disabled
-f, _ := fs.OpenFile("/tmp/example.txt", os.O_RDWR, 0)
+f, _ := osfs.OpenFile("/tmp/example.txt", os.O_RDWR, 0)
 
 // Return vfs.ErrReadOnly
 _, err := f.Write([]byte("Write on readonly fs?"))
+if err != nil {
+    fmt.Errorf("Filesystem is read only!\n")
+}
 
 // Create a fully writable filesystem in memory
-fs := memfs.Create()
-fs.Mkdir("/root")
+mfs := memfs.Create()
+mfs.Mkdir("/root", 0777)
+
+// Create a vfs supporting mounts
+// The root fs is accessing the filesystem of the underlying OS
+fs := mountfs.Create(osfs)
+
+// Mount a memfs inside /memfs
+// /memfs may not exist
+fs.Mount(mfs, "/memfs")
+
+// This will create /testdir inside the memfs
+fs.Mkdir("/memfs/testdir", 0777)
+
+// This would create /tmp/testdir inside your OS fs
+// But the rootfs `osfs` is read-only
+fs.Mkdir("/tmp/testdir", 0777)
 ```
 
 Check detailed examples below. Also check the [GoDocs](http://godoc.org/github.com/blang/vfs).
@@ -46,19 +64,14 @@ Why should I use this lib?
 - Compose/Wrap Filesystems `ReadOnly(OS())` and write simple Wrappers
 - Many features, see [GoDocs](http://godoc.org/github.com/blang/vfs) and examples below
 
-Example
+Features and Examples
 -----
 
-Have a look at full examples in [examples/](examples/)
-
-Features
------
-
-- OS Filesystem support
-- ReadOnly Wrapper 
-- DummyFS for quick mocking
-- MemFS full in-memory filesystem
-- MountFS - support mounts across filesystems
+- [OS Filesystem support](http://godoc.org/github.com/blang/vfs#example-OsFS)
+- [ReadOnly Wrapper](http://godoc.org/github.com/blang/vfs#example-RoFS)
+- [DummyFS for quick mocking](http://godoc.org/github.com/blang/vfs#example-DummyFS)
+- [MemFS - full in-memory filesystem](http://godoc.org/github.com/blang/vfs/memfs#example-MemFS)
+- [MountFS - support mounts across filesystems](http://godoc.org/github.com/blang/vfs/mountfs#example-MountFS)
 
 Current state: ALPHA
 -----

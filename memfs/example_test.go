@@ -1,6 +1,8 @@
-package examples
+package memfs_test
 
-import "github.com/blang/vfs/memfs"
+import (
+	"github.com/blang/vfs/memfs"
+)
 
 func ExampleMemFS() {
 	// Create a fully writable filesystem in memory
