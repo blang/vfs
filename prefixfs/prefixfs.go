@@ -6,46 +6,58 @@ import (
 	"github.com/blang/vfs"
 )
 
-type prefixFS struct {
-	r vfs.Filesystem
-	p string
+// A FS that prefixes the path in each vfs.Filesystem operation.
+type FS struct {
+	vfs.Filesystem
+
+	// Prefix is used to prefix the path in each vfs.Filesystem operation.
+	Prefix string
 }
 
 // Create returns a file system that prefixes all paths and forwards to root.
-func Create(root vfs.Filesystem, prefix string) vfs.Filesystem {
-	return prefixFS{root, prefix}
+func Create(root vfs.Filesystem, prefix string) *FS {
+	return &FS{root, prefix}
 }
 
-func (fs prefixFS) prefix(path string) string {
-	return fs.p + string(fs.PathSeparator()) + path
+// PrefixPath returns path with the prefix prefixed.
+func (fs *FS) PrefixPath(path string) string {
+	return fs.Prefix + string(fs.PathSeparator()) + path
 }
 
-func (fs prefixFS) PathSeparator() uint8 { return fs.r.PathSeparator() }
+// PathSeparator implements vfs.Filesystem.
+func (fs *FS) PathSeparator() uint8 { return fs.Filesystem.PathSeparator() }
 
-func (fs prefixFS) OpenFile(name string, flag int, perm os.FileMode) (vfs.File, error) {
-	return fs.r.OpenFile(fs.prefix(name), flag, perm)
+// OpenFile implements vfs.Filesystem.
+func (fs *FS) OpenFile(name string, flag int, perm os.FileMode) (vfs.File, error) {
+	return fs.Filesystem.OpenFile(fs.PrefixPath(name), flag, perm)
 }
 
-func (fs prefixFS) Remove(name string) error {
-	return fs.r.Remove(fs.prefix(name))
+// Remove implements vfs.Filesystem.
+func (fs *FS) Remove(name string) error {
+	return fs.Filesystem.Remove(fs.PrefixPath(name))
 }
 
-func (fs prefixFS) Rename(oldpath, newpath string) error {
-	return fs.r.Rename(fs.prefix(oldpath), fs.prefix(newpath))
+// Rename implements vfs.Filesystem.
+func (fs *FS) Rename(oldpath, newpath string) error {
+	return fs.Filesystem.Rename(fs.PrefixPath(oldpath), fs.PrefixPath(newpath))
 }
 
-func (fs prefixFS) Mkdir(name string, perm os.FileMode) error {
-	return fs.r.Mkdir(fs.prefix(name), perm)
+// Mkdir implements vfs.Filesystem.
+func (fs *FS) Mkdir(name string, perm os.FileMode) error {
+	return fs.Filesystem.Mkdir(fs.PrefixPath(name), perm)
 }
 
-func (fs prefixFS) Stat(name string) (os.FileInfo, error) {
-	return fs.r.Stat(fs.prefix(name))
+// Stat implements vfs.Filesystem.
+func (fs *FS) Stat(name string) (os.FileInfo, error) {
+	return fs.Filesystem.Stat(fs.PrefixPath(name))
 }
 
-func (fs prefixFS) Lstat(name string) (os.FileInfo, error) {
-	return fs.r.Lstat(fs.prefix(name))
+// Lstat implements vfs.Filesystem.
+func (fs *FS) Lstat(name string) (os.FileInfo, error) {
+	return fs.Filesystem.Lstat(fs.PrefixPath(name))
 }
 
-func (fs prefixFS) ReadDir(path string) ([]os.FileInfo, error) {
-	return fs.r.ReadDir(fs.prefix(path))
+// ReadDir implements vfs.Filesystem.
+func (fs *FS) ReadDir(path string) ([]os.FileInfo, error) {
+	return fs.Filesystem.ReadDir(fs.PrefixPath(path))
 }
