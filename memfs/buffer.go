@@ -12,6 +12,8 @@ type Buffer interface {
 	io.Writer
 	io.Seeker
 	io.Closer
+	// Truncate shrinks or extends the size of the Buffer to the specified size.
+	Truncate(int64) error
 }
 
 // MinBufferSize is the minimal initial allocated buffer size
@@ -94,6 +96,28 @@ func (v *Buf) Read(p []byte) (n int, err error) {
 	n = copy(p, (*v.buf)[v.ptr:])
 	v.ptr += int64(n)
 	return
+}
+
+// Truncate truncates the Buffer to a given size.
+// It returns an error if the given size is negative.
+// If the Buffer is larger than the specified size, the extra data is lost.
+// If the Buffer is smaller, it is extended and the extended part (hole)
+// reads as zero bytes.
+func (v *Buf) Truncate(size int64) (err error) {
+	if size < 0 {
+		return errors.New("Truncate: size must be non-negative")
+	}
+	if bufSize := int64(len(*v.buf)); size == bufSize {
+		return nil
+	} else if size < bufSize {
+		*v.buf = (*v.buf)[:size]
+	} else /* size > bufSize */ {
+		growSize := int(size - bufSize)
+		if err = v.grow(growSize); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (v *Buf) grow(n int) error {

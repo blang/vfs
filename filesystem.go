@@ -37,6 +37,8 @@ type Filesystem interface {
 type File interface {
 	Name() string
 	Sync() error
+	// Truncate shrinks or extends the size of the File to the specified size.
+	Truncate(int64) error
 	io.Reader
 	io.Writer
 	io.Seeker

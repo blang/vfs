@@ -86,6 +86,11 @@ func (f DumFile) Sync() error {
 	return f.err
 }
 
+// Truncate returns dummy error
+func (f DumFile) Truncate(size int64) error {
+	return f.err
+}
+
 // Close returns dummy error
 func (f DumFile) Close() error {
 	return f.err

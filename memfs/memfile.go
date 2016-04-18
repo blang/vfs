@@ -34,6 +34,14 @@ func (b MemFile) Sync() error {
 	return nil
 }
 
+// Truncate changes the size of the file
+func (b MemFile) Truncate(size int64) (err error) {
+	b.mutex.Lock()
+	err = b.Buffer.Truncate(size)
+	b.mutex.Unlock()
+	return
+}
+
 // Read reads len(p) byte from the underlying buffer starting at the current offset.
 // It returns the number of bytes read and an error if any.
 // Returns io.EOF error if pointer is at the end of the Buffer.

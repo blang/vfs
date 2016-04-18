@@ -343,7 +343,57 @@ func TestOpenAppend(t *testing.T) {
 	f.Close()
 }
 
-func TestTruncate(t *testing.T) {
+func TestTruncateToLength(t *testing.T) {
+	var params = []struct {
+		size int64
+		err  bool
+	}{
+		{-1, true},
+		{0, false},
+		{int64(len(dots) - 1), false},
+		{int64(len(dots)), false},
+		{int64(len(dots) + 1), false},
+	}
+	for _, param := range params {
+		fs := Create()
+		f, err := fs.OpenFile("/readme.txt", os.O_CREATE|os.O_RDWR, 0666)
+		if err != nil {
+			t.Fatalf("Could not open file: %s", err)
+		}
+		if n, err := f.Write([]byte(dots)); err != nil {
+			t.Errorf("Unexpected error: %s", err)
+		} else if n != len(dots) {
+			t.Errorf("Invalid write count: %d", n)
+		}
+		f.Close()
+
+		newSize := param.size
+		err = f.Truncate(newSize)
+		if param.err {
+			if err == nil {
+				t.Errorf("Error expected truncating file to length %d", newSize)
+			}
+			return
+		} else if err != nil {
+			t.Errorf("Error truncating file: %s", err)
+		}
+
+		b, err := readFile(fs, "/readme.txt")
+		if err != nil {
+			t.Errorf("Error reading truncated file: %s", err)
+		}
+		if int64(len(b)) != newSize {
+			t.Errorf("File should be empty after truncation: %d", len(b))
+		}
+		if fi, err := fs.Stat("/readme.txt"); err != nil {
+			t.Errorf("Error stat file: %s", err)
+		} else if fi.Size() != newSize {
+			t.Errorf("Filesize should be %d after truncation", newSize)
+		}
+	}
+}
+
+func TestTruncateToZero(t *testing.T) {
 	const content = "read me"
 	fs := Create()
 	if _, err := writeFile(fs, "/readme.txt", os.O_CREATE|os.O_RDWR, 0666, []byte(content)); err != nil {
