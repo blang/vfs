@@ -2,6 +2,7 @@ package memfs
 
 import (
 	"os"
+	"reflect"
 	"strings"
 
 	"testing"
@@ -187,5 +188,51 @@ func TestRead(t *testing.T) {
 	// Read to empty buffer, err==nil, n == 0
 	if n, err := v.Read(p); err != nil || n > 0 {
 		t.Errorf("Unexpected read error: %d %s, res: %s", n, err, string(p))
+	}
+}
+
+// TestBufferGrowWriteAndSeek tests if Write and Seek inside the
+// buffers boundaries result in invalid growth
+func TestBufferGrowWriteAndSeek(t *testing.T) {
+	buf := make([]byte, 0, 3)
+	v := NewBuffer(&buf)
+
+	writeByte := func(b byte) {
+		n, err := v.Write([]byte{b})
+		if err != nil {
+			t.Fatalf("Error on write: %s", err)
+		} else if n != 1 {
+			t.Fatalf("Unexpected num of bytes written: %d", n)
+		}
+	}
+
+	seek := func(off int64, whence int, checkPos int64) {
+		if n, err := v.Seek(off, whence); err != nil {
+			t.Fatalf("Error on seek: %s", err)
+		} else if n != checkPos {
+			t.Fatalf("Invalid position after seek: %d, expected %d", n, checkPos)
+		}
+	}
+
+	// Buffer: [][XXX]
+	writeByte(0x01)
+	// Buffer: [1][XX]
+	writeByte(0x02)
+	// Buffer: [1,2][X]
+	seek(0, os.SEEK_SET, 0) // Seek to index 0
+	writeByte(0x03)
+	// Buffer: [3,2][X]
+	seek(0, os.SEEK_END, 2) // Seek to end
+	writeByte(0x01)
+	// Buffer: [3,2,1][]
+
+	// Check content of buf
+	if !reflect.DeepEqual([]byte{0x03, 0x02, 0x01}, buf) {
+		t.Fatalf("Invalid buffer: %v, len=%d, cap=%d", buf, len(buf), cap(buf))
+	}
+
+	// Check for growth
+	if c := cap(buf); c != 3 {
+		t.Fatalf("Invalid buffer cap: %d", c)
 	}
 }
