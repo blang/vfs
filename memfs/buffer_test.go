@@ -44,6 +44,30 @@ func TestWrite(t *testing.T) {
 		t.Errorf("Origin buffer did not grow: len=%d, cap=%d", len(buf), cap(buf))
 	}
 
+	// Test on case when no buffer grow is needed
+	if n, err := v.Seek(0, os.SEEK_SET); err != nil || n != 0 {
+		t.Errorf("Invalid seek result: %d %s", n, err)
+	}
+
+	// Write dots on start of the buffer
+	if n, err := v.Write([]byte(dots)); err != nil {
+		t.Errorf("Unexpected error: %s", err)
+	} else if n != len(dots) {
+		t.Errorf("Invalid write count: %d", n)
+	}
+	if s := string(buf[:len(dots)]); s != dots {
+		t.Errorf("Invalid buffer content: %q", s)
+	}
+
+	if len(buf) != len(dots)+len(abc) {
+		t.Errorf("Origin buffer should not grow: len=%d, cap=%d", len(buf), cap(buf))
+	}
+
+	// Restore seek cursor
+	if n, err := v.Seek(0, os.SEEK_END); err != nil {
+		t.Errorf("Invalid seek result: %d %s", n, err)
+	}
+
 	// Can not read, ptr at the end
 	p := make([]byte, len(dots))
 	if n, err := v.Read(p); err == nil || n > 0 {

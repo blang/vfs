@@ -68,9 +68,12 @@ func (v *Buf) Seek(offset int64, whence int) (int64, error) {
 // Write returns non-nil error when n!=len(p).
 func (v *Buf) Write(p []byte) (int, error) {
 	l := len(p)
-	err := v.grow(l)
-	if err != nil {
-		return 0, err
+	writeEnd := int(v.ptr) + l - len(*v.buf)
+	if writeEnd > 0 {
+		err := v.grow(writeEnd)
+		if err != nil {
+			return 0, err
+		}
 	}
 	copy((*v.buf)[v.ptr:], p)
 	v.ptr += int64(l)
