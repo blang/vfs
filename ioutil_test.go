@@ -31,3 +31,24 @@ func TestWriteFile(t *testing.T) {
 		t.Fatalf("Bad file mode: %o (expected %o)", info.Mode(), testmode)
 	}
 }
+
+func TestReadFile(t *testing.T) {
+	fs := memfs.Create()
+
+	f, _ := fs.OpenFile(testpath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, testmode)
+	f.Write(testdata)
+	f.Close()
+
+	data, err := vfs.ReadFile(fs, testpath)
+	if err != nil {
+		t.Fatalf("ReadFile failed: %s", err)
+	}
+	if len(data) != len(testdata) {
+		t.Fatalf("Bad data length: %d bytes (expected %d)", len(data), len(testdata))
+	}
+
+	_, err = vfs.ReadFile(fs, "/doesnt-exist.txt")
+	if err == nil {
+		t.Fatalf("ReadFile failed: expected error")
+	}
+}
