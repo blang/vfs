@@ -106,6 +106,11 @@ func (f DumFile) Read(p []byte) (n int, err error) {
 	return 0, f.err
 }
 
+// ReadAt returns dummy error
+func (f DumFile) ReadAt(p []byte, off int64) (n int, err error) {
+	return 0, f.err
+}
+
 // Seek returns dummy error
 func (f DumFile) Seek(offset int64, whence int) (int64, error) {
 	return 0, f.err

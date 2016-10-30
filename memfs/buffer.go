@@ -9,6 +9,7 @@ import (
 // Buffer is a usable block of data similar to a file
 type Buffer interface {
 	io.Reader
+	io.ReaderAt
 	io.Writer
 	io.Seeker
 	io.Closer
@@ -98,6 +99,25 @@ func (v *Buf) Read(p []byte) (n int, err error) {
 
 	n = copy(p, (*v.buf)[v.ptr:])
 	v.ptr += int64(n)
+	return
+}
+
+// ReadAt reads len(b) bytes from the Buffer starting at byte offset off.
+// It returns the number of bytes read and the error, if any.
+// ReadAt always returns a non-nil error when n < len(b).
+// At end of file, that error is io.EOF.
+func (v *Buf) ReadAt(p []byte, off int64) (n int, err error) {
+	if len(p) == 0 {
+		return 0, nil
+	}
+	if off >= int64(len(*v.buf)) {
+		return 0, io.EOF
+	}
+
+	n = copy(p, (*v.buf)[off:])
+	if n < len(p) {
+		err = io.EOF
+	}
 	return
 }
 
