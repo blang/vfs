@@ -53,6 +53,18 @@ func (b *MemFile) Read(p []byte) (n int, err error) {
 	return
 }
 
+// ReadAt reads len(b) bytes from the Buffer starting at byte offset off.
+// It returns the number of bytes read and the error, if any.
+// ReadAt always returns a non-nil error when n < len(b).
+// At end of file, that error is io.EOF.
+// See Buf.ReadAt()
+func (b *MemFile) ReadAt(p []byte, off int64) (n int, err error) {
+	b.mutex.RLock()
+	n, err = b.Buffer.ReadAt(p, off)
+	b.mutex.RUnlock()
+	return
+}
+
 // Write writes len(p) byte to the Buffer.
 // It returns the number of bytes written and an error if any.
 // Write returns non-nil error when n!=len(p).

@@ -40,6 +40,7 @@ type File interface {
 	// Truncate shrinks or extends the size of the File to the specified size.
 	Truncate(int64) error
 	io.Reader
+	io.ReaderAt
 	io.Writer
 	io.Seeker
 	io.Closer

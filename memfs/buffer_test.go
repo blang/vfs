@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"testing"
+	"io"
 )
 
 const (
@@ -187,6 +188,39 @@ func TestRead(t *testing.T) {
 
 	// Read to empty buffer, err==nil, n == 0
 	if n, err := v.Read(p); err != nil || n > 0 {
+		t.Errorf("Unexpected read error: %d %s, res: %s", n, err, string(p))
+	}
+}
+
+func TestReadAt(t *testing.T) {
+	buf := make([]byte, len(dots))
+	copy(buf, []byte(dots))
+	v := NewBuffer(&buf)
+
+	p := make([]byte, len(dots))
+
+	// Read to empty buffer, err==nil, n == 0
+	if n, err := v.ReadAt(p[:0], 0); err != nil || n > 0 {
+		t.Errorf("Unexpected read error: %d %s, res: %s", n, err, string(p))
+	}
+
+	// Read the entire buffer, err==nil, n == len(dots)
+	if n, err := v.ReadAt(p, 0); err != nil || n != len(dots) || string(p[:n]) != dots {
+		t.Errorf("Unexpected read error: %d %s, res: %s", n, err, string(p))
+	}
+
+	// Read the buffer while crossing the end, err==io.EOF, n == len(dots)-1
+	if n, err := v.ReadAt(p, 1); err != io.EOF || n != len(dots)-1 || string(p[:n]) != dots[1:] {
+		t.Errorf("Unexpected read error: %d %s, res: %s", n, err, string(p))
+	}
+
+	// Read at the buffer's end, err==io.EOF, n == 0
+	if n, err := v.ReadAt(p, int64(len(dots))); err != io.EOF || n > 0 {
+		t.Errorf("Unexpected read error: %d %s, res: %s", n, err, string(p))
+	}
+
+	// Read past the buffer's end, err==io.EOF, n == 0
+	if n, err := v.ReadAt(p, int64(len(dots)+1)); err != io.EOF || n > 0 {
 		t.Errorf("Unexpected read error: %d %s, res: %s", n, err, string(p))
 	}
 }
