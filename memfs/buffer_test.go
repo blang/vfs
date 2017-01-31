@@ -5,8 +5,8 @@ import (
 	"reflect"
 	"strings"
 
-	"testing"
 	"io"
+	"testing"
 )
 
 const (
