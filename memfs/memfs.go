@@ -79,7 +79,7 @@ func (fi fileInfo) IsDir() bool {
 // Modification time is updated on:
 // 	- Creation
 // 	- Rename
-// 	- Open
+// 	- Open (except with O_RDONLY)
 func (fi fileInfo) ModTime() time.Time {
 	return fi.modTime
 }
@@ -254,7 +254,9 @@ func (fs *MemFS) OpenFile(name string, flag int, perm os.FileMode) (vfs.File, er
 			return nil, &os.PathError{"open", name, ErrIsDirectory}
 		}
 	}
-	fiNode.modTime = time.Now()
+	if !hasFlag(os.O_RDONLY, flag) {
+		fiNode.modTime = time.Now()
+	}
 	return fiNode.file(flag)
 }
 
