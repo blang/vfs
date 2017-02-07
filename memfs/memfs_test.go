@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/blang/vfs"
 )
@@ -538,4 +539,28 @@ func TestRename(t *testing.T) {
 		t.Errorf("Expected error renaming file")
 	}
 
+}
+
+func TestModTime(t *testing.T) {
+	fs := Create()
+
+	tBeforeWrite := time.Now()
+	writeFile(fs, "/readme.txt", os.O_CREATE|os.O_RDWR, 0666, []byte{0, 0, 0})
+	fi, _ := fs.Stat("/readme.txt")
+	mtimeAfterWrite := fi.ModTime()
+
+	if !mtimeAfterWrite.After(tBeforeWrite) {
+		t.Error("Open should modify mtime")
+	}
+
+	f, err := fs.OpenFile("/readme.txt", os.O_RDONLY, 0666)
+	if err != nil {
+		t.Fatalf("Could not open file: %s", err)
+	}
+	f.Close()
+	tAfterRead := fi.ModTime()
+
+	if tAfterRead != mtimeAfterWrite {
+		t.Error("Open with O_RDONLY should not modify mtime")
+	}
 }
