@@ -26,13 +26,29 @@ func TestCreate(t *testing.T) {
 		}
 	}
 
-	// Create same file twice, no error because os.O_TRUNC is used
+	// Create same file again
+	{
+		_, err := fs.OpenFile("/testfile", os.O_RDWR|os.O_CREATE, 0666)
+		if err != nil {
+			t.Fatalf("Unexpected error creating file: %s", err)
+		}
+
+	}
+
+	// Create same file again, but truncate it
 	{
 		_, err := fs.OpenFile("/testfile", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
 		if err != nil {
+			t.Fatalf("Unexpected error creating file: %s", err)
+		}
+	}
+
+	// Create same file again with O_CREATE|O_EXCL, which is an error
+	{
+		_, err := fs.OpenFile("/testfile", os.O_RDWR|os.O_CREATE|os.O_EXCL, 0666)
+		if err == nil {
 			t.Fatalf("Expected error creating file: %s", err)
 		}
-
 	}
 
 	// Create file with unkown parent
