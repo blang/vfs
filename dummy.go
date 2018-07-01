@@ -56,6 +56,11 @@ func (fs DummyFS) ReadDir(path string) ([]os.FileInfo, error) {
 	return nil, fs.err
 }
 
+// Readlink returns dummy error
+func (fs DummyFS) Readlink(name string) (string, error) {
+        return "dummy", fs.err
+}
+
 // DummyFile mocks a File returning an error on every operation
 // To create a DummyFS returning a dummyFile instead of an error
 // you can your own DummyFS:

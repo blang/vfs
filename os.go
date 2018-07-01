@@ -52,3 +52,7 @@ func (fs OsFS) Lstat(name string) (os.FileInfo, error) {
 func (fs OsFS) ReadDir(path string) ([]os.FileInfo, error) {
 	return ioutil.ReadDir(path)
 }
+
+func (fs OsFS) Readlink(name string) (string, error) {
+        return os.Readlink(name)
+}

@@ -388,3 +388,50 @@ func TestReadDirMountPoints(t *testing.T) {
 		t.Errorf("Expected mountpoint, but got: %s", fis)
 	}
 }
+
+func (fs *testDummyFS) Readlink(name string) (string, error) {
+	fs.lastPath = name
+        return fs.Filesystem.Readlink(name)
+}
+
+func TestReadlink(t *testing.T) {
+	errRoot := errors.New("Rootfs")
+	errMount := errors.New("Mount")
+        rootFS := vfs.Dummy(errRoot)
+	mountFS := &testDummyFS{Filesystem: vfs.Dummy(errMount)}
+	fs := Create(rootFS)
+	fs.Mount(mountFS, "/tmp")
+
+	// Test selection of correct fs
+	_, err := fs.Readlink("/tmp/testfile1")
+	if err != errMount {
+		t.Errorf("Wrong filesystem selected: %s", err)
+	}
+
+	if n := mountFS.lastPath; n != "/testfile1" {
+		t.Errorf("Incorrect inner name: %s", n)
+	}
+}
+
+func TestReadlinkMountPoint(t *testing.T) {
+	errRoot := errors.New("Rootfs")
+	errMount := errors.New("Mount")
+        rootFS := vfs.Dummy(errRoot)
+	mountFS := &testDummyFS{Filesystem: vfs.Dummy(errMount)}
+	fs := Create(rootFS)
+	fs.Mount(mountFS, "/tmp")
+
+	// Test selection of correct fs
+	path, err := fs.Readlink("/tmp")
+	if err != errMount {
+		t.Errorf("Wrong filesystem selected: %s", err)
+	}
+
+	if n := mountFS.lastPath; n != "/" {
+		t.Errorf("Incorrect inner name: %s", n)
+	}
+
+        if n := path; n != "tmp" {
+		t.Errorf("Mountpoint should be return correct name, got instead: %s", n)
+        }
+}

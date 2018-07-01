@@ -381,3 +381,7 @@ func (fs *MemFS) Stat(name string) (os.FileInfo, error) {
 func (fs *MemFS) Lstat(name string) (os.FileInfo, error) {
 	return fs.Stat(name)
 }
+
+func (fs *MemFS) Readlink(name string) (string, error) {
+        return fs.Readlink(name)
+}

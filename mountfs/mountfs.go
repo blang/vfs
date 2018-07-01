@@ -177,3 +177,13 @@ func (fs MountFS) ReadDir(path string) ([]os.FileInfo, error) {
 	}
 	return fis, err
 }
+
+// Readlink returns the destination of a link
+func (fs MountFS) Readlink(name string) (string, error) {
+	mount, innerPath := findMount(name, fs.mounts, fs.rootFS, string(fs.PathSeparator()))
+        path, err := mount.Readlink(innerPath)
+	if innerPath == "/" {
+		return filepath.Base(name), err
+	}
+	return path, err
+}
