@@ -29,6 +29,7 @@ type Filesystem interface {
 	Stat(name string) (os.FileInfo, error)
 	Lstat(name string) (os.FileInfo, error)
 	ReadDir(path string) ([]os.FileInfo, error)
+	Readlink(name string) (string, error)
 }
 
 // File represents a File with common operations.
