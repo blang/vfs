@@ -41,6 +41,11 @@ func (fs DummyFS) Mkdir(name string, perm os.FileMode) error {
 	return fs.err
 }
 
+// Symlink returns dummy error
+func (fs DummyFS) Symlink(oldname, newname string) error {
+	return fs.err
+}
+
 // Stat returns dummy error
 func (fs DummyFS) Stat(name string) (os.FileInfo, error) {
 	return nil, fs.err

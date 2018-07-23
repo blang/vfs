@@ -127,6 +127,16 @@ func (fs MountFS) Mkdir(name string, perm os.FileMode) error {
 	return mount.Mkdir(innerPath, perm)
 }
 
+// Symlink creates a symlink
+func (fs MountFS) Symlink(oldname, newname string) error {
+	oldMount, oldInnerName := findMount(oldname, fs.mounts, fs.rootFS, string(fs.PathSeparator()))
+	newMount, newInnerName := findMount(newname, fs.mounts, fs.rootFS, string(fs.PathSeparator()))
+	if oldMount != newMount {
+		return ErrBoundary
+	}
+	return oldMount.Symlink(oldInnerName, newInnerName)
+}
+
 type innerFileInfo struct {
 	os.FileInfo
 	name string

@@ -103,6 +103,27 @@ func TestMkdir(t *testing.T) {
 	}
 }
 
+func TestSymlink(t *testing.T) {
+	rfs := rootfs()
+	fs := Create(rfs, prefixPath)
+
+	f, err := fs.OpenFile("file", os.O_CREATE, 0666)
+	defer f.Close()
+	if err != nil {
+		t.Errorf("OpenFile: %v", err)
+	}
+
+	err = fs.Symlink("/file", "file2")
+	if err != nil {
+		t.Errorf("Symlink: %v", err)
+	}
+
+	_, err = rfs.Stat(prefix("file2"))
+	if os.IsNotExist(err) {
+		t.Errorf("root:%v not found (%v)", prefix("file2"), err)
+	}
+}
+
 func TestStat(t *testing.T) {
 	rfs := rootfs()
 	fs := Create(rfs, prefixPath)

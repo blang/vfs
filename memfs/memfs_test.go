@@ -126,6 +126,57 @@ func TestMkdirTree(t *testing.T) {
 	//TODO: Subdir of file
 }
 
+func TestSymlink(t *testing.T) {
+	fs := Create()
+
+	if err := vfs.MkdirAll(fs, "/tmp", 0755); err != nil {
+		t.Fatal("Unable to create /tmp:", err)
+	}
+	if err := vfs.WriteFile(fs, "/tmp/teacup", []byte("i am a teacup"), 0644); err != nil {
+		t.Fatal("Unable to fill teacup:", err)
+	}
+	err := fs.Symlink("/tmp/teacup", "/tmp/cup")
+	if err != nil {
+		t.Fatal("Symlink failed:", err)
+	}
+	_, node, err := fs.fileInfo("/tmp/cup")
+	if string(*node.buf) != "/tmp/teacup" {
+		t.Fatal("Wrong symlink contents in buf:", string(*node.buf))
+	}
+	fluid, err := vfs.ReadFile(fs, "/tmp/cup")
+	if err != nil {
+		t.Fatal("Failed to read from /tmp/cup:", err)
+	}
+	if string(fluid) != "i am a teacup" {
+		t.Fatal("Wrong contents in cup. got:", string(fluid))
+	}
+}
+
+func TestDirectorySymlink(t *testing.T) {
+	fs := Create()
+
+	if err := vfs.MkdirAll(fs, "/foo/a/b", 0755); err != nil {
+		t.Fatal("Unable mkdir /foo/a/b:", err)
+	}
+	if err := vfs.WriteFile(fs, "/foo/a/b/c", []byte("I can \"c\" clearly now"), 0644); err != nil {
+		t.Fatal("Unable to write /foo/a/b/c:", err)
+	}
+	if err := fs.Symlink("/foo/a/b", "/foo/also_b"); err != nil {
+		t.Fatal("Unable to symlink /foo/also_b -> /foo/a/b:", err)
+	}
+
+	contents, err := vfs.ReadFile(fs, "/foo/also_b/c")
+	if err != nil {
+		t.Fatal("Unable to read /foo/also_b/c:", err)
+	}
+	if string(contents) != "I can \"c\" clearly now" {
+		t.Fatal("Unexpected contents read from c:", err)
+	}
+}
+
+// TODO: relative symlinks
+// TODO: overwrite symlinks
+
 func TestReadDir(t *testing.T) {
 	fs := Create()
 	dirs := []string{"/home", "/home/linus", "/home/rob", "/home/pike", "/home/blang"}

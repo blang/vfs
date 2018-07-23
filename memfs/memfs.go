@@ -31,6 +31,8 @@ type MemFS struct {
 	lock *sync.RWMutex
 }
 
+var _ vfs.Filesystem = &MemFS{}
+
 // Create a new MemFS filesystem which entirely resides in memory
 func Create() *MemFS {
 	root := &fileInfo{
@@ -130,6 +132,18 @@ func (fs *MemFS) Mkdir(name string, perm os.FileMode) error {
 	return nil
 }
 
+func (fs *MemFS) Symlink(oldname, newname string) error {
+	file, err := fs.OpenFile(
+		newname,
+		os.O_CREATE|os.O_WRONLY|os.O_TRUNC,
+		0777|os.ModeSymlink)
+	if err != nil {
+		return err
+	}
+	file.Write([]byte(oldname))
+	return nil
+}
+
 // byName implements sort.Interface
 type byName []os.FileInfo
 
@@ -185,17 +199,24 @@ func (fs *MemFS) fileInfo(path string) (parent *fileInfo, node *fileInfo, err er
 	segments = segments[1:]
 
 	// Further directories
-	if len(segments) > 1 {
-		for _, seg := range segments[:len(segments)-1] {
+	for _, seg := range segments[:len(segments)-1] {
 
-			if parent.childs == nil {
-				return nil, nil, os.ErrNotExist
+		if parent.childs == nil {
+			return nil, nil, os.ErrNotExist
+		}
+		entry, ok := parent.childs[seg]
+		if !ok {
+			return nil, nil, os.ErrNotExist
+		}
+		if entry.dir {
+			parent = entry
+		} else if entry.mode&os.ModeSymlink != 0 {
+			_, parent, err = fs.fileInfo(string(*entry.buf))
+			if err != nil {
+				return nil, nil, err
 			}
-			if entry, ok := parent.childs[seg]; ok && entry.dir {
-				parent = entry
-			} else {
-				return nil, nil, os.ErrNotExist
-			}
+		} else {
+			return nil, nil, os.ErrNotExist
 		}
 	}
 
@@ -221,6 +242,11 @@ func hasFlag(flag int, flags int) bool {
 func (fs *MemFS) OpenFile(name string, flag int, perm os.FileMode) (vfs.File, error) {
 	fs.lock.Lock()
 	defer fs.lock.Unlock()
+
+	return fs.openFile(name, flag, perm)
+}
+
+func (fs *MemFS) openFile(name string, flag int, perm os.FileMode) (vfs.File, error) {
 
 	name = filepath.Clean(name)
 	base := filepath.Base(name)
@@ -248,6 +274,9 @@ func (fs *MemFS) OpenFile(name string, flag int, perm os.FileMode) (vfs.File, er
 		}
 		if fiNode.dir {
 			return nil, &os.PathError{"open", name, ErrIsDirectory}
+		}
+		if fiNode.mode&os.ModeSymlink != 0 {
+			return fs.openFile(string(*fiNode.buf), flag, perm)
 		}
 	}
 

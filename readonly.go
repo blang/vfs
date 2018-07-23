@@ -44,6 +44,10 @@ func (fs RoFS) Mkdir(name string, perm os.FileMode) error {
 	return ErrReadOnly
 }
 
+func (fs RoFS) Symlink(oldname, newname string) error {
+	return ErrReadOnly
+}
+
 // OpenFile returns ErrorReadOnly if flag contains os.O_CREATE, os.O_APPEND, os.O_WRONLY.
 // Otherwise it returns a read-only File with disabled Write(..) operation.
 func (fs RoFS) OpenFile(name string, flag int, perm os.FileMode) (File, error) {
