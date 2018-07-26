@@ -179,26 +179,17 @@ func (fs *MemFS) ReadDir(path string) ([]os.FileInfo, error) {
 }
 
 func (fs *MemFS) fileInfo(path string) (parent *fileInfo, node *fileInfo, err error) {
-	path = filepath.Clean(path)
-	segments := vfs.SplitPath(path, PathSeparator)
+	return fs.relativeFileInfo(fs.wd, path)
+}
+
+func (fs *MemFS) relativeFileInfo(wd *fileInfo, path string) (parent *fileInfo, node *fileInfo, err error) {
+	parent, segments := fs.dirSegments(wd, path)
 
 	// Shortcut for working directory and root
-	if len(segments) == 1 {
-		if segments[0] == "" {
-			return nil, fs.root, nil
-		} else if segments[0] == "." {
-			return fs.wd.parent, fs.wd, nil
-		}
+	if len(segments) == 0 {
+		return parent.parent, parent, nil
 	}
 
-	// Determine root to traverse
-	parent = fs.root
-	if segments[0] == "." {
-		parent = fs.wd
-	}
-	segments = segments[1:]
-
-	// Further directories
 	for _, seg := range segments[:len(segments)-1] {
 
 		if parent.childs == nil {
@@ -211,10 +202,16 @@ func (fs *MemFS) fileInfo(path string) (parent *fileInfo, node *fileInfo, err er
 		if entry.dir {
 			parent = entry
 		} else if entry.mode&os.ModeSymlink != 0 {
-			_, parent, err = fs.fileInfo(string(*entry.buf))
+			// Look up interior symlink
+			_, parent, err = fs.relativeFileInfo(parent, string(*entry.buf))
 			if err != nil {
 				return nil, nil, err
 			}
+			// Symlink was not to a directory
+			if parent == nil {
+				return nil, nil, vfs.ErrNotDirectory
+			}
+
 		} else {
 			return nil, nil, os.ErrNotExist
 		}
@@ -223,6 +220,9 @@ func (fs *MemFS) fileInfo(path string) (parent *fileInfo, node *fileInfo, err er
 	lastSeg := segments[len(segments)-1]
 	if parent.childs != nil {
 		if node, ok := parent.childs[lastSeg]; ok {
+			if node.mode&os.ModeSymlink != 0 {
+				return fs.relativeFileInfo(parent, string(*node.buf))
+			}
 			return parent, node, nil
 		}
 	} else {
@@ -230,6 +230,19 @@ func (fs *MemFS) fileInfo(path string) (parent *fileInfo, node *fileInfo, err er
 	}
 
 	return parent, nil, nil
+}
+
+func (fs *MemFS) dirSegments(wd *fileInfo, path string) (parent *fileInfo, segments []string) {
+	path = filepath.Clean(path)
+	segments = vfs.SplitPath(path, PathSeparator)
+
+	// Determine root to traverse
+	parent = fs.root
+	if segments[0] == "." {
+		parent = wd
+	}
+	segments = segments[1:]
+	return parent, segments
 }
 
 func hasFlag(flag int, flags int) bool {
@@ -242,11 +255,6 @@ func hasFlag(flag int, flags int) bool {
 func (fs *MemFS) OpenFile(name string, flag int, perm os.FileMode) (vfs.File, error) {
 	fs.lock.Lock()
 	defer fs.lock.Unlock()
-
-	return fs.openFile(name, flag, perm)
-}
-
-func (fs *MemFS) openFile(name string, flag int, perm os.FileMode) (vfs.File, error) {
 
 	name = filepath.Clean(name)
 	base := filepath.Base(name)
@@ -274,9 +282,6 @@ func (fs *MemFS) openFile(name string, flag int, perm os.FileMode) (vfs.File, er
 		}
 		if fiNode.dir {
 			return nil, &os.PathError{"open", name, ErrIsDirectory}
-		}
-		if fiNode.mode&os.ModeSymlink != 0 {
-			return fs.openFile(string(*fiNode.buf), flag, perm)
 		}
 	}
 

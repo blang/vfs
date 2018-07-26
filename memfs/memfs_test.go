@@ -3,6 +3,7 @@ package memfs
 import (
 	"io/ioutil"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -139,10 +140,6 @@ func TestSymlink(t *testing.T) {
 	if err != nil {
 		t.Fatal("Symlink failed:", err)
 	}
-	_, node, err := fs.fileInfo("/tmp/cup")
-	if string(*node.buf) != "/tmp/teacup" {
-		t.Fatal("Wrong symlink contents in buf:", string(*node.buf))
-	}
 	fluid, err := vfs.ReadFile(fs, "/tmp/cup")
 	if err != nil {
 		t.Fatal("Failed to read from /tmp/cup:", err)
@@ -158,9 +155,11 @@ func TestDirectorySymlink(t *testing.T) {
 	if err := vfs.MkdirAll(fs, "/foo/a/b", 0755); err != nil {
 		t.Fatal("Unable mkdir /foo/a/b:", err)
 	}
+
 	if err := vfs.WriteFile(fs, "/foo/a/b/c", []byte("I can \"c\" clearly now"), 0644); err != nil {
 		t.Fatal("Unable to write /foo/a/b/c:", err)
 	}
+
 	if err := fs.Symlink("/foo/a/b", "/foo/also_b"); err != nil {
 		t.Fatal("Unable to symlink /foo/also_b -> /foo/a/b:", err)
 	}
@@ -174,8 +173,60 @@ func TestDirectorySymlink(t *testing.T) {
 	}
 }
 
-// TODO: relative symlinks
-// TODO: overwrite symlinks
+func TestMultipleAndRelativeSymlinks(t *testing.T) {
+	fs := Create()
+	if err := vfs.MkdirAll(fs, "a/real_b/real_c", 0755); err != nil {
+		t.Fatal("Unable mkdir a/real_b/real_c:", err)
+	}
+
+	for _, fsEntry := range []struct {
+		name, link, content string
+	}{
+		{name: "a/b", link: "real_b"},
+		{name: "a/b/c", link: "real_c"},
+		{name: "a/b/c/real_d", content: "Lah dee dah"},
+		{name: "a/b/c/d", link: "real_d"},
+		{name: "a/d", link: "b/c/d"},
+	} {
+		if fsEntry.link != "" {
+			if err := fs.Symlink(fsEntry.link, fsEntry.name); err != nil {
+				t.Fatalf("Unable to symlink %s -> %s: %v", fsEntry.name, fsEntry.link, err)
+			}
+		} else if fsEntry.content != "" {
+			if err := vfs.WriteFile(fs, fsEntry.name, []byte(fsEntry.content), 0644); err != nil {
+				t.Fatalf("Unable to write %s: %v", fsEntry.name, err)
+			}
+		}
+	}
+
+	for _, fn := range []string{
+		"a/b/c/d",
+		"a/d",
+	} {
+		contents, err := vfs.ReadFile(fs, fn)
+		if err != nil {
+			t.Fatalf("Unable to read %s: %v", fn, err)
+		}
+		if string(contents) != "Lah dee dah" {
+			t.Fatalf("Unexpected contents read from %s: %v", fn, err)
+		}
+	}
+}
+
+func TestSymlinkIsNotADirectory(t *testing.T) {
+	fs := Create()
+	if err := vfs.MkdirAll(fs, "a/real_b/real_c", 0755); err != nil {
+		t.Fatal("Unable mkdir a/real_b/real_c:", err)
+	}
+	if err := fs.Symlink("broken", "a/b"); err != nil {
+		t.Fatal("Unable to symlink a/b -> broken:", err)
+	}
+	if err := vfs.WriteFile(fs, "a/b/c", []byte("Whatever"), 0644); !strings.Contains(err.Error(), vfs.ErrNotDirectory.Error()) {
+		t.Fatal("Expected an error when writing a/b/c:", err)
+	}
+}
+
+// TODO: overwrite/remove symlinks
 
 func TestReadDir(t *testing.T) {
 	fs := Create()
