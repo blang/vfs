@@ -66,6 +66,13 @@ func TestMkDir(t *testing.T) {
 	}
 }
 
+func TestROSymlink(t *testing.T) {
+	err := ro.Symlink("old", "new")
+	if err != ErrReadOnly {
+		t.Errorf("Symlink error expected")
+	}
+}
+
 type writeDummyFS struct {
 	Filesystem
 }

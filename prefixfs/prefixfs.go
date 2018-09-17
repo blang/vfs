@@ -16,7 +16,7 @@ type FS struct {
 
 // Create returns a file system that prefixes all paths and forwards to root.
 func Create(root vfs.Filesystem, prefix string) *FS {
-	return &FS{root, prefix}
+	return &FS{Filesystem: root, Prefix: prefix}
 }
 
 // PrefixPath returns path with the prefix prefixed.
@@ -45,6 +45,11 @@ func (fs *FS) Rename(oldpath, newpath string) error {
 // Mkdir implements vfs.Filesystem.
 func (fs *FS) Mkdir(name string, perm os.FileMode) error {
 	return fs.Filesystem.Mkdir(fs.PrefixPath(name), perm)
+}
+
+// Symlink implements vfs.Filesystem.
+func (fs *FS) Symlink(oldname, newname string) error {
+	return fs.Filesystem.Symlink(fs.PrefixPath(oldname), fs.PrefixPath(newname))
 }
 
 // Stat implements vfs.Filesystem.

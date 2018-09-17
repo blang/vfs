@@ -22,7 +22,7 @@ type Filesystem interface {
 	// RemoveAll(path string) error
 	Rename(oldpath, newpath string) error
 	Mkdir(name string, perm os.FileMode) error
-	// Symlink(oldname, newname string) error
+	Symlink(oldname, newname string) error
 	// TempDir() string
 	// Chmod(name string, mode FileMode) error
 	// Chown(name string, uid, gid int) error

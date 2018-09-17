@@ -33,6 +33,11 @@ func (fs OsFS) Mkdir(name string, perm os.FileMode) error {
 	return os.Mkdir(name, perm)
 }
 
+// Symlink wraps os.Symlink
+func (fs OsFS) Symlink(oldname, newname string) error {
+	return os.Symlink(oldname, newname)
+}
+
 // Rename wraps os.Rename
 func (fs OsFS) Rename(oldpath, newpath string) error {
 	return os.Rename(oldpath, newpath)

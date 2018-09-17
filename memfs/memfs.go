@@ -31,6 +31,8 @@ type MemFS struct {
 	lock *sync.RWMutex
 }
 
+var _ vfs.Filesystem = &MemFS{}
+
 // Create a new MemFS filesystem which entirely resides in memory
 func Create() *MemFS {
 	root := &fileInfo{
@@ -130,6 +132,18 @@ func (fs *MemFS) Mkdir(name string, perm os.FileMode) error {
 	return nil
 }
 
+func (fs *MemFS) Symlink(oldname, newname string) error {
+	file, err := fs.OpenFile(
+		newname,
+		os.O_CREATE|os.O_WRONLY|os.O_TRUNC,
+		0777|os.ModeSymlink)
+	if err != nil {
+		return err
+	}
+	file.Write([]byte(oldname))
+	return nil
+}
+
 // byName implements sort.Interface
 type byName []os.FileInfo
 
@@ -165,43 +179,50 @@ func (fs *MemFS) ReadDir(path string) ([]os.FileInfo, error) {
 }
 
 func (fs *MemFS) fileInfo(path string) (parent *fileInfo, node *fileInfo, err error) {
-	path = filepath.Clean(path)
-	segments := vfs.SplitPath(path, PathSeparator)
+	return fs.relativeFileInfo(fs.wd, path)
+}
+
+func (fs *MemFS) relativeFileInfo(wd *fileInfo, path string) (parent *fileInfo, node *fileInfo, err error) {
+	parent, segments := fs.dirSegments(wd, path)
 
 	// Shortcut for working directory and root
-	if len(segments) == 1 {
-		if segments[0] == "" {
-			return nil, fs.root, nil
-		} else if segments[0] == "." {
-			return fs.wd.parent, fs.wd, nil
+	if len(segments) == 0 {
+		return parent.parent, parent, nil
+	}
+
+	for _, seg := range segments[:len(segments)-1] {
+
+		if parent.childs == nil {
+			return nil, nil, os.ErrNotExist
 		}
-	}
-
-	// Determine root to traverse
-	parent = fs.root
-	if segments[0] == "." {
-		parent = fs.wd
-	}
-	segments = segments[1:]
-
-	// Further directories
-	if len(segments) > 1 {
-		for _, seg := range segments[:len(segments)-1] {
-
-			if parent.childs == nil {
-				return nil, nil, os.ErrNotExist
+		entry, ok := parent.childs[seg]
+		if !ok {
+			return nil, nil, os.ErrNotExist
+		}
+		if entry.dir {
+			parent = entry
+		} else if entry.mode&os.ModeSymlink != 0 {
+			// Look up interior symlink
+			_, parent, err = fs.relativeFileInfo(parent, string(*entry.buf))
+			if err != nil {
+				return nil, nil, err
 			}
-			if entry, ok := parent.childs[seg]; ok && entry.dir {
-				parent = entry
-			} else {
-				return nil, nil, os.ErrNotExist
+			// Symlink was not to a directory
+			if parent == nil {
+				return nil, nil, vfs.ErrNotDirectory
 			}
+
+		} else {
+			return nil, nil, os.ErrNotExist
 		}
 	}
 
 	lastSeg := segments[len(segments)-1]
 	if parent.childs != nil {
 		if node, ok := parent.childs[lastSeg]; ok {
+			if node.mode&os.ModeSymlink != 0 {
+				return fs.relativeFileInfo(parent, string(*node.buf))
+			}
 			return parent, node, nil
 		}
 	} else {
@@ -209,6 +230,19 @@ func (fs *MemFS) fileInfo(path string) (parent *fileInfo, node *fileInfo, err er
 	}
 
 	return parent, nil, nil
+}
+
+func (fs *MemFS) dirSegments(wd *fileInfo, path string) (parent *fileInfo, segments []string) {
+	path = filepath.Clean(path)
+	segments = vfs.SplitPath(path, PathSeparator)
+
+	// Determine root to traverse
+	parent = fs.root
+	if segments[0] == "." {
+		parent = wd
+	}
+	segments = segments[1:]
+	return parent, segments
 }
 
 func hasFlag(flag int, flags int) bool {
