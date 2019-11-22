@@ -3,6 +3,8 @@ package vfs
 import (
 	"errors"
 	"os"
+
+	"github.com/blang/vfs"
 )
 
 // ReadOnly creates a readonly wrapper around the given filesystem.
@@ -42,6 +44,14 @@ func (fs RoFS) Rename(oldpath, newpath string) error {
 // Mkdir is disabled and returns ErrorReadOnly
 func (fs RoFS) Mkdir(name string, perm os.FileMode) error {
 	return ErrReadOnly
+}
+
+// Open opens the named file on the given Filesystem for reading.
+// If successful, methods on the returned file can be used for reading.
+// The associated file descriptor has mode os.O_RDONLY.
+// If there is an error, it will be of type *PathError.
+func (fs RoFS) Open(name string) (vfs.File, error) {
+	return fs.OpenFile(name, os.O_RDONLY, 0)
 }
 
 // OpenFile returns ErrorReadOnly if flag contains os.O_CREATE, os.O_APPEND, os.O_WRONLY.
