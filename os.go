@@ -18,6 +18,11 @@ func (fs OsFS) PathSeparator() uint8 {
 	return os.PathSeparator
 }
 
+// Open wraps os.Open
+func (fs OsFS) Open(name string) (File, error) {
+	return os.Open(name)
+}
+
 // OpenFile wraps os.OpenFile
 func (fs OsFS) OpenFile(name string, flag int, perm os.FileMode) (File, error) {
 	return os.OpenFile(name, flag, perm)

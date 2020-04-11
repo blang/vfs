@@ -21,6 +21,11 @@ func (fs DummyFS) PathSeparator() uint8 {
 	return '/'
 }
 
+// Open returns dummy error
+func (fs DummyFS) Open(name string) (File, error) {
+	return fs.OpenFile(name, os.O_RDONLY, 0)
+}
+
 // OpenFile returns dummy error
 func (fs DummyFS) OpenFile(name string, flag int, perm os.FileMode) (File, error) {
 	return nil, fs.err

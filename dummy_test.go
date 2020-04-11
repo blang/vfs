@@ -13,6 +13,9 @@ func TestInterface(t *testing.T) {
 
 func TestDummyFS(t *testing.T) {
 	fs := Dummy(errDum)
+	if _, err := fs.Open("/tmp/test123"); err != errDum {
+		t.Errorf("Open DummyError expected: %s", err)
+	}
 	if _, err := fs.OpenFile("test", 0, 0); err != errDum {
 		t.Errorf("OpenFile DummyError expected: %s", err)
 	}

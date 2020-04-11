@@ -276,6 +276,27 @@ func TestReadWrite(t *testing.T) {
 	}
 }
 
+func TestOpen(t *testing.T) {
+	fs := Create()
+	f, err := fs.OpenFile("/readme.txt", os.O_CREATE|os.O_RDWR, 0666)
+	if err != nil {
+		t.Fatalf("OpenFile: %s", err)
+	}
+	_, err = f.Write([]byte("test"))
+	if err != nil {
+		t.Fatalf("Write: %s", err)
+	}
+	f.Close()
+	f2, err := fs.Open("/readme.txt")
+	if err != nil {
+		t.Errorf("Open: %s", err)
+	}
+	err = f2.Close()
+	if err != nil {
+		t.Errorf("Close: %s", err)
+	}
+}
+
 func TestOpenRO(t *testing.T) {
 	fs := Create()
 	f, err := fs.OpenFile("/readme.txt", os.O_CREATE|os.O_RDONLY, 0666)
@@ -288,6 +309,7 @@ func TestOpenRO(t *testing.T) {
 		t.Fatalf("Expected write error")
 	}
 	f.Close()
+
 }
 
 func TestOpenWO(t *testing.T) {

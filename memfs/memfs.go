@@ -215,6 +215,14 @@ func hasFlag(flag int, flags int) bool {
 	return flags&flag == flag
 }
 
+// Open opens the named file on the given Filesystem for reading.
+// If successful, methods on the returned file can be used for reading.
+// The associated file descriptor has mode os.O_RDONLY.
+// If there is an error, it will be of type *PathError.
+func (fs *MemFS) Open(name string) (vfs.File, error) {
+	return fs.OpenFile(name, os.O_RDONLY, 0)
+}
+
 // OpenFile opens a file handle with a specified flag (os.O_RDONLY etc.) and perm (e.g. 0666).
 // If success the returned File can be used for I/O. Otherwise an error is returned, which
 // is a *os.PathError and can be extracted for further information.

@@ -2,9 +2,10 @@ package mountfs
 
 import (
 	"errors"
-	"github.com/blang/vfs"
 	"os"
 	"testing"
+
+	"github.com/blang/vfs"
 )
 
 type mountTest struct {
@@ -139,6 +140,11 @@ func TestOpenFile(t *testing.T) {
 	}
 	if n := f.Name(); n != "/tmp/testfile" {
 		t.Errorf("Unexpected filename: %s", n)
+	}
+
+	_, err = fs.Open("/tmp/testfile")
+	if err != nil {
+		t.Errorf("Open: %s", err)
 	}
 }
 
